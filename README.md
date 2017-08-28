@@ -1,22 +1,11 @@
 ## Installation
 
 ```bash
-$ npm install pelias-schema
+$ git clone
+$ npm install
 ```
-
-[![NPM](https://nodei.co/npm/pelias-schema.png?downloads=true&stars=true)](https://nodei.co/npm/pelias-schema)
 
 ## Usage
-
-You can pull down a versioned copy of the pelias schema from npm:
-
-```javascript
-var schema = require('pelias-schema');
-
-console.log( JSON.stringify( schema, null, 2 ) );
-```
-
-## Scripts
 
 #### create index
 
@@ -66,12 +55,6 @@ Print a list of which plugins are installed and how to install any that are miss
 node scripts/check_plugins.js;
 ```
 
-## NPM Module
-
-The `pelias-schema` npm module can be found here:
-
-[https://npmjs.org/package/pelias-schema](https://npmjs.org/package/pelias-schema)
-
 ## Contributing
 
 Please fork and pull request against upstream master on a feature branch.
@@ -82,14 +65,6 @@ Pretty please; provide unit tests and script fixtures in the `test` directory.
 
 ```bash
 $ npm test
-```
-
-### Running Integration Tests
-
-Requires a running elasticsearch server (no other setup required)
-
-```bash
-$ npm run integration
 ```
 
 ### Running elasticsearch in Docker (for testing purposes)
@@ -143,9 +118,3 @@ $ docker start elastic-test
 ```
 
 The restarted server should now pass the `node scripts/check_plugins.js` check, you are good to go.
-
-### Continuous Integration
-
-Travis tests every release against Node.js versions 4` and `6`.
-
-[![Build Status](https://travis-ci.org/pelias/schema.png?branch=master)](https://travis-ci.org/pelias/schema)

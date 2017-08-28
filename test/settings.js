@@ -79,7 +79,7 @@ module.exports.tests.peliasIndexOneEdgeGramAnalyzer = function(test, common) {
     var analyzer = settings().analysis.analyzer.peliasIndexOneEdgeGram;
     t.deepEqual( analyzer.filter, [
       "lowercase",
-      "icu_folding",
+      "finnish_folding",
       "trim",
       "full_token_address_suffix_expansion",
       "ampersand",
@@ -114,7 +114,7 @@ module.exports.tests.peliasIndexTwoEdgeGramAnalyzer = function(test, common) {
     var analyzer = settings().analysis.analyzer.peliasIndexTwoEdgeGram;
     t.deepEqual( analyzer.filter, [
       "lowercase",
-      "icu_folding",
+      "finnish_folding",
       "trim",
       "full_token_address_suffix_expansion",
       "ampersand",
@@ -146,7 +146,7 @@ module.exports.tests.peliasPhraseAnalyzer = function(test, common) {
     var analyzer = settings().analysis.analyzer.peliasPhrase;
     t.deepEqual( analyzer.filter, [
       "lowercase",
-      "icu_folding",
+      "finnish_folding",
       "trim",
       "ampersand",
       "street_synonym",
