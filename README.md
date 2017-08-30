@@ -3,10 +3,9 @@
 [![Greenkeeper badge](https://badges.greenkeeper.io/pelias/schema.svg)](https://greenkeeper.io/)
 
 ```bash
-$ npm install pelias-schema
+$ git clone
+$ npm install
 ```
-
-[![NPM](https://nodei.co/npm/pelias-schema.png?downloads=true&stars=true)](https://nodei.co/npm/pelias-schema)
 
 ## Usage
 
@@ -71,6 +70,7 @@ var schema = require('pelias-schema');
 
 console.log( JSON.stringify( schema, null, 2 ) );
 ```
+
 ## Contributing
 
 Please fork and pull request against upstream master on a feature branch.
@@ -81,14 +81,6 @@ Pretty please; provide unit tests and script fixtures in the `test` directory.
 
 ```bash
 $ npm test
-```
-
-### Running Integration Tests
-
-Requires a running elasticsearch server (no other setup required)
-
-```bash
-$ npm run integration
 ```
 
 ### Running elasticsearch in Docker (for testing purposes)
@@ -142,9 +134,3 @@ $ docker start elastic-test
 ```
 
 The restarted server should now pass the `node scripts/check_plugins.js` check, you are good to go.
-
-### Continuous Integration
-
-Travis tests every release against Node.js versions 4` and `6`.
-
-[![Build Status](https://travis-ci.org/pelias/schema.png?branch=master)](https://travis-ci.org/pelias/schema)

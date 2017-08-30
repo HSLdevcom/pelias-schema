@@ -79,7 +79,7 @@ module.exports.tests.peliasIndexOneEdgeGramAnalyzer = function(test, common) {
     var analyzer = settings().analysis.analyzer.peliasIndexOneEdgeGram;
     t.deepEqual( analyzer.filter, [
       "lowercase",
-      "icu_folding",
+      "finnish_folding",
       "trim",
       "full_token_address_suffix_expansion",
       "ampersand",
@@ -92,6 +92,38 @@ module.exports.tests.peliasIndexOneEdgeGramAnalyzer = function(test, common) {
       "peliasOneEdgeGramFilter",
       "eliminate_tokens_starting_with_word_marker",
       "remove_encapsulating_word_markers",
+      "unique",
+      "notnull"
+    ]);
+    t.end();
+  });
+};
+
+module.exports.tests.peliasIndexTwoEdgeGramAnalyzer = function(test, common) {
+  test('has peliasIndexTwoEdgeGram analyzer', function(t) {
+    var s = settings();
+    t.equal(typeof s.analysis.analyzer.peliasIndexTwoEdgeGram, 'object', 'there is a peliasIndexTwoEdgeGram analyzer');
+    var analyzer = s.analysis.analyzer.peliasIndexTwoEdgeGram;
+    t.equal(analyzer.type, 'custom', 'custom analyzer');
+    t.equal(typeof analyzer.tokenizer, 'string', 'tokenizer specified');
+    t.deepEqual(analyzer.char_filter, ["punctuation","nfkc_normalizer"], 'character filters specified');
+    t.true(Array.isArray(analyzer.filter), 'filters specified');
+    t.end();
+  });
+  test('peliasIndexTwoEdgeGram token filters', function(t) {
+    var analyzer = settings().analysis.analyzer.peliasIndexTwoEdgeGram;
+    t.deepEqual( analyzer.filter, [
+      "lowercase",
+      "finnish_folding",
+      "trim",
+      "full_token_address_suffix_expansion",
+      "ampersand",
+      "remove_ordinals",
+      "removeAllZeroNumericPrefix",
+      "prefixZeroToSingleDigitNumbers",
+      "peliasTwoEdgeGramFilter",
+      "removeAllZeroNumericPrefix",
+      "direction_synonym_contraction_keep_original",
       "unique",
       "notnull"
     ]);
@@ -114,7 +146,7 @@ module.exports.tests.peliasPhraseAnalyzer = function(test, common) {
     var analyzer = settings().analysis.analyzer.peliasPhrase;
     t.deepEqual( analyzer.filter, [
       "lowercase",
-      "icu_folding",
+      "finnish_folding",
       "trim",
       "ampersand",
       "street_synonym",
