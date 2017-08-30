@@ -14,6 +14,7 @@ function generate(){
 
   // Default settings
   var settings = {
+    "number_of_shards": 1,
     "analysis": {
       "tokenizer": {
         "peliasNameTokenizer": {
@@ -57,26 +58,6 @@ function generate(){
             "peliasOneEdgeGramFilter",
             "eliminate_tokens_starting_with_word_marker",
             "remove_encapsulating_word_markers",
-            "unique",
-            "notnull"
-          ]
-        },
-        "peliasIndexTwoEdgeGram" : {
-          "type": "custom",
-          "tokenizer" : "peliasNameTokenizer",
-          "char_filter" : ["punctuation", "nfkc_normalizer"],
-          "filter": [
-            "lowercase",
-            "finnish_folding",
-            "trim",
-            "full_token_address_suffix_expansion",
-            "ampersand",
-            "remove_ordinals",
-            "removeAllZeroNumericPrefix",
-            "prefixZeroToSingleDigitNumbers",
-            "peliasTwoEdgeGramFilter",
-            "removeAllZeroNumericPrefix",
-            "direction_synonym_contraction_keep_original",
             "unique",
             "notnull"
           ]

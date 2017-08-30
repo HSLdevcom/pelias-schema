@@ -21,7 +21,7 @@
           ],
           "filter": [
             "lowercase",
-            "finnish_folding",
+            "icu_folding",
             "trim",
             "word_delimiter",
             "notnull"
@@ -36,7 +36,7 @@
           ],
           "filter": [
             "lowercase",
-            "finnish_folding",
+            "icu_folding",
             "trim",
             "full_token_address_suffix_expansion",
             "ampersand",
@@ -53,29 +53,6 @@
             "notnull"
           ]
         },
-        "peliasIndexTwoEdgeGram": {
-          "type": "custom",
-          "tokenizer": "peliasNameTokenizer",
-          "char_filter": [
-            "punctuation",
-            "nfkc_normalizer"
-          ],
-          "filter": [
-            "lowercase",
-            "finnish_folding",
-            "trim",
-            "full_token_address_suffix_expansion",
-            "ampersand",
-            "remove_ordinals",
-            "removeAllZeroNumericPrefix",
-            "prefixZeroToSingleDigitNumbers",
-            "peliasTwoEdgeGramFilter",
-            "removeAllZeroNumericPrefix",
-            "direction_synonym_contraction_keep_original",
-            "unique",
-            "notnull"
-          ]
-        },
         "peliasQueryPartialToken": {
           "type": "custom",
           "tokenizer": "peliasNameTokenizer",
@@ -85,7 +62,7 @@
           ],
           "filter": [
             "lowercase",
-            "finnish_folding",
+            "icu_folding",
             "trim",
             "partial_token_address_suffix_expansion",
             "ampersand",
@@ -104,7 +81,7 @@
           ],
           "filter": [
             "lowercase",
-            "finnish_folding",
+            "icu_folding",
             "trim",
             "remove_ordinals",
             "full_token_address_suffix_expansion",
@@ -123,7 +100,7 @@
           ],
           "filter": [
             "lowercase",
-            "finnish_folding",
+            "icu_folding",
             "trim",
             "ampersand",
             "street_synonym",
@@ -159,7 +136,7 @@
           ],
           "filter": [
             "lowercase",
-            "finnish_folding",
+            "icu_folding",
             "remove_duplicate_spaces",
             "keyword_street_suffix_alley",
             "keyword_street_suffix_annex",
@@ -1487,9 +1464,6 @@
           "type": "pattern_replace",
           "pattern": "west",
           "replacement": "w"
-        },
-        "finnish_folding" : {
-          "type":"icu_folding","unicodeSetFilter":"[^åäöÅÄÖ]"
         }
       },
       "char_filter": {
@@ -1564,7 +1538,7 @@
     },
     "index": {
       "number_of_replicas": "999",
-      "number_of_shards": "5",
+      "number_of_shards": "1",
       "refresh_interval": "1m"
     }
   },

@@ -99,38 +99,6 @@ module.exports.tests.peliasIndexOneEdgeGramAnalyzer = function(test, common) {
   });
 };
 
-module.exports.tests.peliasIndexTwoEdgeGramAnalyzer = function(test, common) {
-  test('has peliasIndexTwoEdgeGram analyzer', function(t) {
-    var s = settings();
-    t.equal(typeof s.analysis.analyzer.peliasIndexTwoEdgeGram, 'object', 'there is a peliasIndexTwoEdgeGram analyzer');
-    var analyzer = s.analysis.analyzer.peliasIndexTwoEdgeGram;
-    t.equal(analyzer.type, 'custom', 'custom analyzer');
-    t.equal(typeof analyzer.tokenizer, 'string', 'tokenizer specified');
-    t.deepEqual(analyzer.char_filter, ["punctuation","nfkc_normalizer"], 'character filters specified');
-    t.true(Array.isArray(analyzer.filter), 'filters specified');
-    t.end();
-  });
-  test('peliasIndexTwoEdgeGram token filters', function(t) {
-    var analyzer = settings().analysis.analyzer.peliasIndexTwoEdgeGram;
-    t.deepEqual( analyzer.filter, [
-      "lowercase",
-      "finnish_folding",
-      "trim",
-      "full_token_address_suffix_expansion",
-      "ampersand",
-      "remove_ordinals",
-      "removeAllZeroNumericPrefix",
-      "prefixZeroToSingleDigitNumbers",
-      "peliasTwoEdgeGramFilter",
-      "removeAllZeroNumericPrefix",
-      "direction_synonym_contraction_keep_original",
-      "unique",
-      "notnull"
-    ]);
-    t.end();
-  });
-};
-
 module.exports.tests.peliasPhraseAnalyzer = function(test, common) {
   test('has peliasPhrase analyzer', function(t) {
     var s = settings();
@@ -213,7 +181,7 @@ module.exports.tests.peliasStreetAnalyzer = function(test, common) {
 // cycle through all analyzers and ensure the corrsponding token filters are defined
 module.exports.tests.allTokenFiltersPresent = function(test, common) {
   var ES_INBUILT_FILTERS = [
-    'lowercase', 'icu_folding', 'trim', 'word_delimiter', 'unique'
+    'lowercase', 'finnish_folding', 'trim', 'word_delimiter', 'unique'
   ];
   test('all token filters present', function(t) {
     var s = settings();
