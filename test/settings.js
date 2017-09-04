@@ -79,7 +79,7 @@ module.exports.tests.peliasIndexOneEdgeGramAnalyzer = function(test, common) {
     var analyzer = settings().analysis.analyzer.peliasIndexOneEdgeGram;
     t.deepEqual( analyzer.filter, [
       "lowercase",
-      "icu_folding",
+      "finnish_folding",
       "trim",
       "full_token_address_suffix_expansion",
       "ampersand",
@@ -114,7 +114,7 @@ module.exports.tests.peliasPhraseAnalyzer = function(test, common) {
     var analyzer = settings().analysis.analyzer.peliasPhrase;
     t.deepEqual( analyzer.filter, [
       "lowercase",
-      "icu_folding",
+      "finnish_folding",
       "trim",
       "ampersand",
       "street_synonym",
@@ -181,7 +181,7 @@ module.exports.tests.peliasStreetAnalyzer = function(test, common) {
 // cycle through all analyzers and ensure the corrsponding token filters are defined
 module.exports.tests.allTokenFiltersPresent = function(test, common) {
   var ES_INBUILT_FILTERS = [
-    'lowercase', 'icu_folding', 'trim', 'word_delimiter', 'unique'
+    'lowercase', 'finnish_folding', 'trim', 'word_delimiter', 'unique'
   ];
   test('all token filters present', function(t) {
     var s = settings();

@@ -14,6 +14,7 @@ function generate(){
 
   // Default settings
   var settings = {
+    "number_of_shards": 1,
     "analysis": {
       "tokenizer": {
         "peliasNameTokenizer": {
@@ -32,7 +33,7 @@ function generate(){
           "char_filter" : ["punctuation", "nfkc_normalizer"],
           "filter": [
             "lowercase",
-            "icu_folding",
+            "finnish_folding",
             "trim",
             "word_delimiter",
             "notnull"
@@ -44,7 +45,7 @@ function generate(){
           "char_filter" : ["punctuation", "nfkc_normalizer"],
           "filter": [
             "lowercase",
-            "icu_folding",
+            "finnish_folding",
             "trim",
             "full_token_address_suffix_expansion",
             "ampersand",
@@ -67,7 +68,7 @@ function generate(){
           "char_filter" : ["punctuation", "nfkc_normalizer"],
           "filter": [
             "lowercase",
-            "icu_folding",
+            "finnish_folding",
             "trim",
             "partial_token_address_suffix_expansion",
             "ampersand",
@@ -83,7 +84,7 @@ function generate(){
           "char_filter" : ["punctuation", "nfkc_normalizer"],
           "filter": [
             "lowercase",
-            "icu_folding",
+            "finnish_folding",
             "trim",
             "remove_ordinals",
             "full_token_address_suffix_expansion",
@@ -99,7 +100,7 @@ function generate(){
           "char_filter" : ["punctuation", "nfkc_normalizer"],
           "filter": [
             "lowercase",
-            "icu_folding",
+            "finnish_folding",
             "trim",
             "ampersand",
             "street_synonym",
@@ -128,7 +129,7 @@ function generate(){
           "char_filter" : ["punctuation", "nfkc_normalizer"],
           "filter": [
             "lowercase",
-            "icu_folding",
+            "finnish_folding",
             "remove_duplicate_spaces",
           ].concat( street_suffix.synonyms.map( function( synonym ){
             return "keyword_street_suffix_" + synonym.split(' ')[0];
@@ -141,6 +142,10 @@ function generate(){
         }
       },
       "filter" : {
+        "finnish_folding": {
+          "type": "icu_folding",
+          "unicodeSetFilter": "[^åäöÅÄÖ]"
+        },
         "ampersand" :{
           "type": "synonym",
           "synonyms": [ "and => &" ]
