@@ -9,7 +9,6 @@ var common = {
 };
 
 var tests = [
-  require('./compile.js'),
   require('./document.js'),
   require('./partial-centroid.js'),
   require('./partial-admin.js'),
