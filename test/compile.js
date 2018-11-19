@@ -42,8 +42,8 @@ module.exports.tests.dynamic_templates = function(test, common) {
     t.deepEqual(template.mapping, {
       type: 'string',
       analyzer: 'peliasIndexOneEdgeGram',
-      fielddata: {
-        loading: 'eager_global_ordinals'
+      fielddata : {
+        format: "disabled"
       }
     });
     t.end();
