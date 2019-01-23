@@ -1,16 +1,17 @@
-var admin = require('./partial/admin');
-var postalcode = require('./partial/postalcode');
-var hash = require('./partial/hash');
-var multiplier = require('./partial/multiplier');
-var literal = require('./partial/literal');
+const admin = require('./partial/admin');
+const postalcode = require('./partial/postalcode');
+const hash = require('./partial/hash');
+const multiplier = require('./partial/multiplier');
+const literal = require('./partial/literal');
+const literal_with_doc_values = require('./partial/literal_with_doc_values');
+const config = require('pelias-config').generate();
 
 var schema = {
   properties: {
 
     // data partitioning
-    source: literal,
-    layer: literal,
-    alpha3: admin,
+    source: literal_with_doc_values,
+    layer: literal_with_doc_values,
 
     // place name (ngram analysis)
     name: hash,
@@ -21,11 +22,15 @@ var schema = {
     // address data
     address_parts: {
       type: 'object',
-      dynamic: true,
+      dynamic: 'strict',
       properties: {
         name: {
           type: 'string',
           analyzer: 'keyword',
+        },
+        unit: {
+          type: 'string',
+          analyzer: 'peliasUnit',
         },
         number: {
           type: 'string',
@@ -45,8 +50,22 @@ var schema = {
     // hierarchy
     parent: {
       type: 'object',
-      dynamic: true,
+      dynamic: 'strict',
       properties: {
+        // https://github.com/whosonfirst/whosonfirst-placetypes#continent
+        continent: admin,
+        continent_a: admin,
+        continent_id: literal,
+
+        // https://github.com/whosonfirst/whosonfirst-placetypes#ocean
+        ocean: admin,
+        ocean_a: admin,
+        ocean_id: literal,
+
+        // https://github.com/whosonfirst/whosonfirst-placetypes#empire
+        empire: admin,
+        empire_a: admin,
+        empire_id: literal,
 
         // https://github.com/whosonfirst/whosonfirst-placetypes#country
         country: admin,
@@ -57,6 +76,11 @@ var schema = {
         dependency: admin,
         dependency_a: admin,
         dependency_id: literal,
+
+        // https://github.com/whosonfirst/whosonfirst-placetypes#marinearea
+        marinearea: admin,
+        marinearea_a: admin,
+        marinearea_id: literal,
 
         // https://github.com/whosonfirst/whosonfirst-placetypes#macroregion
         macroregion: admin,
@@ -124,7 +148,7 @@ var schema = {
         type: 'string',
         analyzer: 'peliasIndexOneEdgeGram',
         fielddata : {
-          loading: 'eager_global_ordinals'
+          format: "disabled"
         }
       }
     },
@@ -136,7 +160,7 @@ var schema = {
         type: 'string',
         analyzer: 'peliasPhrase',
         fielddata : {
-          loading: 'eager_global_ordinals'
+          format: "disabled"
         }
       }
     }
@@ -147,7 +171,7 @@ var schema = {
   _all: {
     enabled: false
   },
-  dynamic: 'true'
+  dynamic: 'strict'
 };
 
 module.exports = schema;
