@@ -4,10 +4,9 @@
 // The greater issue is descriped in: https://github.com/pelias/pelias/issues/211
 // The cases tested here are described in: https://github.com/pelias/schema/issues/105
 
-var tape = require('tape'),
-    elastictest = require('elastictest'),
-    schema = require('../schema'),
-    punctuation = require('../punctuation');
+const elastictest = require('elastictest');
+const config = require('pelias-config').generate();
+const getTotalHits = require('./_hits_total_helper');
 
 module.exports.tests = {};
 
@@ -15,51 +14,33 @@ module.exports.tests = {};
 module.exports.tests.index_expanded_form_search_contracted = function(test, common){
   test( 'index expanded and retrieve contracted form', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index a document with a name which contains a synonym (center)
     suite.action( function( done ){
       suite.client.index({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         id: '1',
         body: { name: { default: 'Grolmanstraße' } }
       }, done);
     });
 
-    // search using 'peliasQueryPartialToken'
+    // search using 'peliasQuery'
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { match: {
           'name.default': {
-            'analyzer': 'peliasQueryPartialToken',
+            'analyzer': 'peliasQuery',
             'query': 'Grolmanstr.'
           }
         }}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
-        done();
-      });
-    });
-
-    // search using 'peliasQueryFullToken'
-    suite.assert( function( done ){
-      suite.client.search({
-        index: suite.props.index,
-        type: 'test',
-        body: { query: { match: {
-          'name.default': {
-            'analyzer': 'peliasQueryFullToken',
-            'query': 'Grolmanstr.'
-          }
-        }}}
-      }, function( err, res ){
-        t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
+        t.equal( getTotalHits(res.hits), 1, 'document found' );
         done();
       });
     });
@@ -74,14 +55,14 @@ module.exports.tests.index_expanded_form_search_contracted = function(test, comm
 // module.exports.tests.index_contracted_form_search_expanded = function(test, common){
 //   test( 'index contracted and search expanded', function(t){
 
-//     var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+//     var suite = new elastictest.Suite( common.clientOpts, common.create );
 //     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
 //     // index a document with a name which contains a synonym (center)
 //     suite.action( function( done ){
 //       suite.client.index({
 //         index: suite.props.index,
-//         type: 'test',
+//         type: config.schema.typeName,
 //         id: '1',
 //         body: { name: { default: 'Grolmanstr.' } }
 //       }, done);
@@ -94,7 +75,7 @@ module.exports.tests.index_expanded_form_search_contracted = function(test, comm
 //     suite.assert( function( done ){
 //       suite.client.search({
 //         index: suite.props.index,
-//         type: 'test',
+//         type: config.schema.typeName,
 //         body: { query: { match: {
 //           'name.default': {
 //             'analyzer': 'peliasQueryPartialToken',
@@ -103,28 +84,28 @@ module.exports.tests.index_expanded_form_search_contracted = function(test, comm
 //         }}}
 //       }, function( err, res ){
 //         t.equal( err, undefined );
-//         t.equal( res.hits.total, 1, 'document found' );
+//         t.equal( getTotalHits(res.hits), 1, 'document found' );
 //         done();
 //       });
 //     });
 
-//     // search using 'peliasQueryFullToken'
+//     // search using 'peliasQuery'
 //     // @note: this case is currently not supported.
 //     // Please index your data in the expanded form.
 
 //     suite.assert( function( done ){
 //       suite.client.search({
 //         index: suite.props.index,
-//         type: 'test',
+//         type: config.schema.typeName,
 //         body: { query: { match: {
 //           'name.default': {
-//             'analyzer': 'peliasQueryFullToken',
+//             'analyzer': 'peliasQuery',
 //             'query': 'Grolmanstraße'
 //           }
 //         }}}
 //       }, function( err, res ){
 //         t.equal( err, undefined );
-//         t.equal( res.hits.total, 1, 'document found' );
+//         t.equal( getTotalHits(res.hits), 1, 'document found' );
 //         done();
 //       });
 //     });

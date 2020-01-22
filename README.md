@@ -10,6 +10,11 @@ This package defines the Elasticsearch schema used by Pelias. Pelias requires qu
 [![Greenkeeper badge](https://badges.greenkeeper.io/pelias/schema.svg)](https://greenkeeper.io/)
 [![NPM](https://nodei.co/npm/pelias-schema.png?downloads=true&stars=true)](https://nodei.co/npm/pelias-schema)
 [![Build Status](https://travis-ci.org/pelias/schema.png?branch=master)](https://travis-ci.org/pelias/schema)
+
+## Requirements
+
+See [Pelias Software requirements](https://github.com/pelias/documentation/blob/master/requirements.md) for general Pelias requirements.
+
 ## Installation
 
 ```bash
@@ -22,7 +27,7 @@ $ npm install
 #### create index
 
 ```bash
-node scripts/create_index.js;               # quick start
+./bin/create_index                          # quick start
 ```
 
 #### drop index
@@ -135,9 +140,11 @@ Installed analysis-icu into /usr/share/elasticsearch/plugins/analysis-icu
 The plugin has been installed, you will now need to restart the elasticsearch service:
 
 ```bash
+
 # use ctrl+c to exit and then:
 
 $ docker start elastic-test
+
 ```
 
 The restarted server should now pass the `node scripts/check_plugins.js` check, you are good to go.

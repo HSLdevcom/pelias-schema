@@ -2,7 +2,6 @@
 
 var tape = require('tape'),
     elastictest = require('elastictest'),
-    schema = require('../schema'),
     punctuation = require('../punctuation');
 
 module.exports.tests = {};
@@ -10,8 +9,8 @@ module.exports.tests = {};
 module.exports.tests.analyze = function(test, common){
   test( 'analyze', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasZip' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasZip' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     assertAnalysis( 'lowercase', 'F', ['f']);
@@ -25,8 +24,8 @@ module.exports.tests.analyze = function(test, common){
 module.exports.tests.functional = function(test, common){
   test( 'functional', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasZip' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasZip' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     assertAnalysis( 'usa zip', '10010', [ '10010' ]);
@@ -51,23 +50,3 @@ module.exports.all = function (tape, common) {
     module.exports.tests[testCase](test, common);
   }
 };
-
-function analyze( suite, t, analyzer, comment, text, expected ){
-  suite.assert( function( done ){
-    suite.client.indices.analyze({
-      index: suite.props.index,
-      analyzer: analyzer,
-      text: text
-    }, function( err, res ){
-      if( err ) console.error( err );
-      t.deepEqual( simpleTokens( res.tokens ), expected, comment );
-      done();
-    });
-  });
-}
-
-function simpleTokens( tokens ){
-  return tokens.map( function( t ){
-    return t.token;
-  });
-}

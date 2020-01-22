@@ -1,5 +1,3 @@
-'use strict';
-
 var path = require('path'),
     settings = require('../settings'),
     fs = require('fs');
@@ -82,19 +80,41 @@ module.exports.tests.peliasIndexOneEdgeGramAnalyzer = function(test, common) {
       "finnish_folding",
       "trim",
       "custom_name",
-      "full_token_address_suffix_expansion",
+      "street_suffix",
+      "directionals",
       "ampersand",
       "remove_ordinals",
       "removeAllZeroNumericPrefix",
-      "surround_single_characters_with_word_markers",
-      "house_number_word_delimiter",
-      "remove_single_characters",
-      "surround_house_numbers_with_word_markers",
       "peliasOneEdgeGramFilter",
-      "eliminate_tokens_starting_with_word_marker",
-      "remove_encapsulating_word_markers",
-      "unique",
-      "notnull"
+      "unique_only_same_position",
+      "notnull",
+      "flatten_graph"
+    ]);
+    t.end();
+  });
+};
+
+module.exports.tests.peliasQueryAnalyzer = function (test, common) {
+  test('has peliasQuery analyzer', function (t) {
+    var s = settings();
+    t.equal(typeof s.analysis.analyzer.peliasQuery, 'object', 'there is a peliasQuery analyzer');
+    var analyzer = s.analysis.analyzer.peliasQuery;
+    t.equal(analyzer.type, 'custom', 'custom analyzer');
+    t.equal(typeof analyzer.tokenizer, 'string', 'tokenizer specified');
+    t.deepEqual(analyzer.char_filter, ['punctuation', 'nfkc_normalizer'], 'character filters specified');
+    t.true(Array.isArray(analyzer.filter), 'filters specified');
+    t.end();
+  });
+  test('peliasQuery token filters', function (t) {
+    var analyzer = settings().analysis.analyzer.peliasQuery;
+    t.deepEqual(analyzer.filter, [
+      'icu_folding',
+      'lowercase',
+      'trim',
+      'remove_ordinals',
+      'removeAllZeroNumericPrefix',
+      'unique_only_same_position',
+      'notnull'
     ]);
     t.end();
   });
@@ -117,12 +137,16 @@ module.exports.tests.peliasPhraseAnalyzer = function(test, common) {
       "lowercase",
       "finnish_folding",
       "trim",
-      "custom_name",
+      "remove_duplicate_spaces",
       "ampersand",
-      "street_suffix_contractions",
+      "custom_name",
+      "street_suffix",
       "directionals",
-      "unique",
-      "notnull"
+      "icu_folding",
+      "remove_ordinals",
+      "unique_only_same_position",
+      "notnull",
+      "flatten_graph"
     ]);
     t.end();
   });
@@ -143,7 +167,10 @@ module.exports.tests.peliasZipAnalyzer = function(test, common) {
     var analyzer = settings().analysis.analyzer.peliasZip;
     t.deepEqual( analyzer.filter, [
       "lowercase",
-      "trim"
+      "icu_folding",
+      "trim",
+      "unique_only_same_position",
+      "notnull"
     ]);
     t.end();
   });
@@ -164,7 +191,10 @@ module.exports.tests.peliasUnitAnalyzer = function(test, common) {
     var analyzer = settings().analysis.analyzer.peliasUnit;
     t.deepEqual( analyzer.filter, [
       "lowercase",
-      "trim"
+      "icu_folding",
+      "trim",
+      "unique_only_same_position",
+      "notnull"
     ]);
     t.end();
   });
@@ -196,15 +226,28 @@ module.exports.tests.peliasStreetAnalyzer = function(test, common) {
   });
   test('peliasStreet token filters', function(t) {
     var analyzer = settings().analysis.analyzer.peliasStreet;
-    t.equal( analyzer.filter.length, 134, 'lots of filters' );
+    t.deepEqual( analyzer.filter, [
+      "lowercase",
+      "trim",
+      "remove_duplicate_spaces",
+      "custom_street",
+      "street_suffix",
+      "directionals",
+      "icu_folding",
+      "remove_ordinals",
+      "trim",
+      "unique_only_same_position",
+      "notnull",
+      "flatten_graph"
+    ]);
     t.end();
   });
 };
 
-// cycle through all analyzers and ensure the corrsponding token filters are defined
+// cycle through all analyzers and ensure the corrsponding token filters are globally defined
 module.exports.tests.allTokenFiltersPresent = function(test, common) {
   var ES_INBUILT_FILTERS = [
-    'lowercase', 'finnish_folding', 'trim', 'word_delimiter', 'unique'
+    'lowercase', 'finnish_folding', 'trim', 'word_delimiter', 'unique', 'flatten_graph'
   ];
   test('all token filters present', function(t) {
     var s = settings();
@@ -212,11 +255,33 @@ module.exports.tests.allTokenFiltersPresent = function(test, common) {
       var analyzer = s.analysis.analyzer[analyzerName];
       if( Array.isArray( analyzer.filter ) ){
         analyzer.filter.forEach( function( tokenFilterName ){
-          var filterExists = s.analysis.filter.hasOwnProperty( tokenFilterName );
-          if( !filterExists && -1 < ES_INBUILT_FILTERS.indexOf( tokenFilterName ) ){
-            filterExists = true;
-          }
+          var filterExists = (
+            s.analysis.filter.hasOwnProperty( tokenFilterName ) ||
+            ES_INBUILT_FILTERS.includes( tokenFilterName )
+          );
           t.true( filterExists, 'token filter exists: ' + tokenFilterName );
+        });
+      }
+    }
+    t.end();
+  });
+};
+
+// cycle through all analyzers and ensure the mandatory token filters are defined on each
+module.exports.tests.mandatoryTokenFiltersPresent = function (test, common) {
+  var MANDATORY_FILTERS = [
+    'lowercase', 'icu_folding', 'trim', 'unique_only_same_position', 'notnull'
+  ];
+  test('mandatory filters present', function (t) {
+    var s = settings();
+    for (var analyzerName in s.analysis.analyzer) {
+      var analyzer = s.analysis.analyzer[analyzerName];
+      if (Array.isArray(analyzer.filter)) {
+        MANDATORY_FILTERS.forEach(function (filterName) {
+          t.true(
+            analyzer.filter.includes(filterName),
+            `mandatory token filter ${filterName} not defined on ${analyzerName}`
+          );
         });
       }
     }
@@ -255,7 +320,10 @@ module.exports.tests.ampersandFilter = function(test, common) {
     t.equal(typeof s.analysis.filter.ampersand, 'object', 'there is a ampersand filter');
     var filter = s.analysis.filter.ampersand;
     t.equal(filter.type, 'synonym');
-    t.deepEqual(filter.synonyms, [ "and => &" ]);
+    t.deepEqual(filter.synonyms, [
+      "&,and",
+      "&,und"
+    ]);
     t.end();
   });
 };
@@ -302,13 +370,13 @@ module.exports.tests.removeAllZeroNumericPrefixFilter = function(test, common) {
 // this filter stems common street suffixes
 // eg. road=>rd and street=>st
 module.exports.tests.streetSynonymFilter = function(test, common) {
-  test('has street_suffix_contractions filter', function(t) {
+  test('has street_suffix filter', function(t) {
     var s = settings();
-    t.equal(typeof s.analysis.filter.street_suffix_contractions, 'object', 'there is an street_suffix_contractions filter');
-    var filter = s.analysis.filter.street_suffix_contractions;
+    t.equal(typeof s.analysis.filter.street_suffix, 'object', 'there is an street_suffix filter');
+    var filter = s.analysis.filter.street_suffix;
     t.equal(filter.type, 'synonym');
     t.true(Array.isArray(filter.synonyms));
-    t.equal(filter.synonyms.length, 120);
+    t.equal(filter.synonyms.length, 127);
     t.end();
   });
 };
@@ -352,7 +420,7 @@ module.exports.tests.punctuationCharFilter = function(test, common) {
     var char_filter = s.analysis.char_filter.punctuation;
     t.equal(char_filter.type, 'mapping');
     t.true(Array.isArray(char_filter.mappings));
-    t.equal(char_filter.mappings.length, 47);
+    t.equal(char_filter.mappings.length, 48);
     t.end();
   });
 };
@@ -400,6 +468,8 @@ module.exports.tests.index = function(test, common) {
 module.exports.tests.overrides = function(test, common) {
   test('override defaults', function(t) {
 
+    process.env['PELIAS_CONFIG'] = path.resolve(__dirname + '/fixtures/empty.json');
+
     var s = settings();
     t.equal(s.index['number_of_replicas'], '0', 'unchanged');
 
@@ -408,6 +478,24 @@ module.exports.tests.overrides = function(test, common) {
 
     s = settings();
     t.equal(s.index['number_of_replicas'], '999', 'changed');
+    t.end();
+
+    // unset the PELIAS_CONFIG env var
+    delete process.env['PELIAS_CONFIG'];
+  });
+  test('override similarity', function (t) {
+
+    process.env['PELIAS_CONFIG'] = path.resolve(__dirname + '/fixtures/empty.json');
+
+    var s = settings();
+    t.equal(s.index.similarity.peliasDefaultSimilarity.k1, 1.2, 'unchanged');
+
+    // set the PELIAS_CONFIG env var
+    process.env['PELIAS_CONFIG'] = path.resolve(__dirname + '/fixtures/similarity.json');
+
+    s = settings();
+    t.equal(s.index.similarity.peliasDefaultSimilarity.k1, 0, 'changed');
+    t.equal(s.index.similarity.peliasDefaultSimilarity.b, 0.75, 'changed');
     t.end();
 
     // unset the PELIAS_CONFIG env var

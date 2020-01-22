@@ -4,10 +4,10 @@
 // The greater issue is descriped in: https://github.com/pelias/pelias/issues/211
 // The cases tested here are described in: https://github.com/pelias/schema/issues/105
 
-var tape = require('tape'),
-    elastictest = require('elastictest'),
-    schema = require('../schema'),
-    punctuation = require('../punctuation');
+const elastictest = require('elastictest');
+const config = require('pelias-config').generate();
+
+const getTotalHits = require('./_hits_total_helper');
 
 module.exports.tests = {};
 
@@ -15,51 +15,51 @@ module.exports.tests = {};
 module.exports.tests.index_and_retrieve_expanded_form = function(test, common){
   test( 'index and retrieve expanded form', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index a document with a name which contains a synonym (center)
     suite.action( function( done ){
       suite.client.index({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         id: '1',
         body: { name: { default: 'center' } }
       }, done);
     });
 
-    // search using 'peliasQueryPartialToken'
+    // search using 'peliasQuery'
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { match: {
           'name.default': {
-            'analyzer': 'peliasQueryPartialToken',
+            'analyzer': 'peliasQuery',
             'query': 'cent'
           }
         }}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
+        t.equal( getTotalHits(res.hits), 1, 'document found' );
         done();
       });
     });
 
-    // search using 'peliasQueryFullToken'
+    // search using 'peliasQuery'
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { match: {
           'name.default': {
-            'analyzer': 'peliasQueryFullToken',
+            'analyzer': 'peliasQuery',
             'query': 'center'
           }
         }}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
+        t.equal( getTotalHits(res.hits), 1, 'document found' );
         done();
       });
     });
@@ -72,51 +72,33 @@ module.exports.tests.index_and_retrieve_expanded_form = function(test, common){
 module.exports.tests.index_and_retrieve_contracted_form = function(test, common){
   test( 'index and retrieve contracted form', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index a document with a name which contains a synonym (center)
     suite.action( function( done ){
       suite.client.index({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         id: '1',
         body: { name: { default: 'ctr' } }
       }, done);
     });
 
-    // search using 'peliasQueryPartialToken'
+    // search using 'peliasQuery'
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { match: {
           'name.default': {
-            'analyzer': 'peliasQueryPartialToken',
+            'analyzer': 'peliasQuery',
             'query': 'ctr'
           }
         }}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
-        done();
-      });
-    });
-
-    // search using 'peliasQueryFullToken'
-    suite.assert( function( done ){
-      suite.client.search({
-        index: suite.props.index,
-        type: 'test',
-        body: { query: { match: {
-          'name.default': {
-            'analyzer': 'peliasQueryFullToken',
-            'query': 'ctr'
-          }
-        }}}
-      }, function( err, res ){
-        t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
+        t.equal( getTotalHits(res.hits), 1, 'document found' );
         done();
       });
     });
@@ -129,51 +111,51 @@ module.exports.tests.index_and_retrieve_contracted_form = function(test, common)
 module.exports.tests.index_and_retrieve_mixed_form_1 = function(test, common){
   test( 'index and retrieve mixed form 1', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index a document with a name which contains a synonym (center)
     suite.action( function( done ){
       suite.client.index({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         id: '1',
         body: { name: { default: 'ctr' } }
       }, done);
     });
 
-    // search using 'peliasQueryPartialToken'
+    // search using 'peliasQuery'
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { match: {
           'name.default': {
-            'analyzer': 'peliasQueryPartialToken',
+            'analyzer': 'peliasQuery',
             'query': 'cent'
           }
         }}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
+        t.equal( getTotalHits(res.hits), 1, 'document found' );
         done();
       });
     });
 
-    // search using 'peliasQueryFullToken'
+    // search using 'peliasQuery'
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { match: {
           'name.default': {
-            'analyzer': 'peliasQueryFullToken',
+            'analyzer': 'peliasQuery',
             'query': 'center'
           }
         }}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
+        t.equal( getTotalHits(res.hits), 1, 'document found' );
         done();
       });
     });
@@ -186,51 +168,33 @@ module.exports.tests.index_and_retrieve_mixed_form_1 = function(test, common){
 module.exports.tests.index_and_retrieve_mixed_form_2 = function(test, common){
   test( 'index and retrieve mixed form 2', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index a document with a name which contains a synonym (center)
     suite.action( function( done ){
       suite.client.index({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         id: '1',
         body: { name: { default: 'center' } }
       }, done);
     });
 
-    // search using 'peliasQueryPartialToken'
+    // search using 'peliasQuery'
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { match: {
           'name.default': {
-            'analyzer': 'peliasQueryPartialToken',
+            'analyzer': 'peliasQuery',
             'query': 'ctr'
           }
         }}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
-        done();
-      });
-    });
-
-    // search using 'peliasQueryFullToken'
-    suite.assert( function( done ){
-      suite.client.search({
-        index: suite.props.index,
-        type: 'test',
-        body: { query: { match: {
-          'name.default': {
-            'analyzer': 'peliasQueryFullToken',
-            'query': 'ctr'
-          }
-        }}}
-      }, function( err, res ){
-        t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
+        t.equal( getTotalHits(res.hits), 1, 'document found' );
         done();
       });
     });

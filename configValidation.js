@@ -1,24 +1,21 @@
-'use strict';
-
-const Joi = require('joi');
+const Joi = require('@hapi/joi');
 
 // Schema Configuration
 // schema.indexName: populated by defaults if not overridden
 // esclient: object, validation performed by elasticsearch module
-const schema = Joi.object().keys({
-  schema: {
-    indexName: Joi.string()
-  },
-  esclient: Joi.object()
-}).requiredKeys('schema', 'schema.indexName', 'esclient').unknown(true);
+const schema = Joi.object().required().keys({
+  schema: Joi.object().required().keys({
+    indexName: Joi.string().required(),
+    typeName: Joi.string().required()
+  }),
+  esclient: Joi.object().required()
+}).unknown(true);
 
 module.exports = {
   validate: function validate(config) {
-    Joi.validate(config, schema, (err, value) => {
-      if (err) {
-        throw new Error(err.details[0].message);
-      }
-    });
+    const validated = schema.validate(config);
+    if (validated.error) {
+      throw new Error(validated.error.details[0].message);
+    }
   }
-
 };
