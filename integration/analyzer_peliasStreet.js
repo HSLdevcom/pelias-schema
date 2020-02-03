@@ -10,21 +10,21 @@ module.exports.tests = {};
 module.exports.tests.analyze = function(test, common){
   test( 'analyze', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasStreet' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasStreet' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     assertAnalysis( 'lowercase', 'F', ['f']);
-    assertAnalysis( 'asciifolding', 'Max-Beer-Straße', ['max-beer-strasse']);
+    assertAnalysis( 'asciifolding', 'Max-Beer-Straße', ['0:max', '1:beer', '2:strasse', '2:str']);
     assertAnalysis( 'trim', ' f ', ['f'] );
-    assertAnalysis( 'keyword_street_suffix', 'foo Street', ['foo st'] );
-    assertAnalysis( 'keyword_street_suffix', 'foo Road', ['foo rd'] );
-    assertAnalysis( 'keyword_street_suffix', 'foo Crescent', ['foo cres'] );
-    assertAnalysis( 'keyword_compass', 'north foo', ['n foo'] );
-    assertAnalysis( 'keyword_compass', 'SouthWest foo', ['sw foo'] );
-    assertAnalysis( 'keyword_compass', 'foo SouthWest', ['foo sw'] );
-    assertAnalysis( 'remove_ordinals', '1st 2nd 3rd 4th 5th', ['1 2 3 4 5'] );
-    assertAnalysis( 'remove_ordinals', 'Ast th 101st', ['ast th 101'] );
+    assertAnalysis( 'keyword_street_suffix', 'foo Street', ['0:foo', '1:street', '1:st'] );
+    assertAnalysis( 'keyword_street_suffix', 'foo Road', ['0:foo', '1:road', '1:rd'] );
+    assertAnalysis( 'keyword_street_suffix', 'foo Crescent', ['0:foo', '1:crescent', '1:cres'] );
+    assertAnalysis( 'keyword_compass', 'north foo', ['0:north', '0:n', '1:foo'] );
+    assertAnalysis( 'keyword_compass', 'SouthWest foo', ['0:southwest', '0:sw', '1:foo'] );
+    assertAnalysis( 'keyword_compass', 'foo SouthWest', ['0:foo', '1:southwest', '1:sw'] );
+    assertAnalysis( 'remove_ordinals', '1st 2nd 3rd 4th 5th', ['1','2','3','4','5'] );
+    assertAnalysis( 'remove_ordinals', 'Ast th 101st', ['ast','th','101'] );
 
     suite.run( t.end );
   });
@@ -33,15 +33,15 @@ module.exports.tests.analyze = function(test, common){
 module.exports.tests.functional = function(test, common){
   test( 'functional', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasStreet' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasStreet' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
-    assertAnalysis( 'USA address', 'west 26th street', [ 'w 26 st' ]);
-    assertAnalysis( 'USA address', 'West 26th Street', [ 'w 26 st' ]);
-    assertAnalysis( 'USA address', 'w 26th st', [ 'w 26 st' ]);
-    assertAnalysis( 'USA address', 'WEST 26th STREET', [ 'w 26 st' ]);
-    assertAnalysis( 'USA address', 'WEST 26th ST', [ 'w 26 st' ]);
+    assertAnalysis( 'USA address', 'west 26th street', [ '0:west', '0:w', '1:26', '2:street', '2:st' ]);
+    assertAnalysis( 'USA address', 'West 26th Street', [ '0:west', '0:w', '1:26', '2:street', '2:st' ]);
+    assertAnalysis( 'USA address', 'w 26th st', [ '0:w', '0:west', '1:26', '2:st', '2:street' ]);
+    assertAnalysis( 'USA address', 'WEST 26th STREET', [ '0:west', '0:w', '1:26', '2:street', '2:st' ]);
+    assertAnalysis( 'USA address', 'WEST 26th ST', [ '0:west', '0:w', '1:26', '2:st', '2:street' ]);
 
     suite.run( t.end );
   });
@@ -50,14 +50,16 @@ module.exports.tests.functional = function(test, common){
 module.exports.tests.normalize_punctuation = function(test, common){
   test( 'normalize punctuation', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasStreet' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasStreet' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
-    assertAnalysis( 'single space', 'Chapala Street',    [ 'chapala st' ]);
-    assertAnalysis( 'double space', 'Chapala  Street',   [ 'chapala st' ]);
-    assertAnalysis( 'triple space', 'Chapala   Street',  [ 'chapala st' ]);
-    assertAnalysis( 'quad space',   'Chapala    Street', [ 'chapala st' ]);
+    var expected = [ '0:chapala', '1:street', '1:st' ];
+
+    assertAnalysis( 'single space', 'Chapala Street',    expected );
+    assertAnalysis( 'double space', 'Chapala  Street',   expected );
+    assertAnalysis( 'triple space', 'Chapala   Street',  expected );
+    assertAnalysis( 'quad space',   'Chapala    Street', expected );
 
     suite.run( t.end );
   });
@@ -66,8 +68,8 @@ module.exports.tests.normalize_punctuation = function(test, common){
 module.exports.tests.remove_ordinals = function(test, common){
   test( 'remove ordinals', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasStreet' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasStreet' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     assertAnalysis( 'ordindals', "1st", ["1"] );
@@ -140,20 +142,22 @@ module.exports.tests.remove_ordinals = function(test, common){
 module.exports.tests.tokenizer = function(test, common){
   test( 'tokenizer', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasStreet' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasStreet' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
+    var expected = [ '0:bedell', '1:street', '1:st', '2:133', '3:avenue', '3:ave', '3:av' ];
+
     // specify 2 streets with a delimeter
-    assertAnalysis( 'forward slash', 'Bedell Street/133rd Avenue',   [ 'bedell st', '133 ave' ]);
-    assertAnalysis( 'forward slash', 'Bedell Street /133rd Avenue',  [ 'bedell st', '133 ave' ]);
-    assertAnalysis( 'forward slash', 'Bedell Street/ 133rd Avenue',  [ 'bedell st', '133 ave' ]);
-    assertAnalysis( 'back slash',    'Bedell Street\\133rd Avenue',  [ 'bedell st', '133 ave' ]);
-    assertAnalysis( 'back slash',    'Bedell Street \\133rd Avenue', [ 'bedell st', '133 ave' ]);
-    assertAnalysis( 'back slash',    'Bedell Street\\ 133rd Avenue', [ 'bedell st', '133 ave' ]);
-    assertAnalysis( 'comma',         'Bedell Street,133rd Avenue',   [ 'bedell st', '133 ave' ]);
-    assertAnalysis( 'comma',         'Bedell Street ,133rd Avenue',  [ 'bedell st', '133 ave' ]);
-    assertAnalysis( 'comma',         'Bedell Street, 133rd Avenue',  [ 'bedell st', '133 ave' ]);
+    assertAnalysis( 'forward slash', 'Bedell Street/133rd Avenue',   expected );
+    assertAnalysis( 'forward slash', 'Bedell Street /133rd Avenue',  expected );
+    assertAnalysis( 'forward slash', 'Bedell Street/ 133rd Avenue',  expected );
+    assertAnalysis( 'back slash',    'Bedell Street\\133rd Avenue',  expected );
+    assertAnalysis( 'back slash',    'Bedell Street \\133rd Avenue', expected );
+    assertAnalysis( 'back slash',    'Bedell Street\\ 133rd Avenue', expected );
+    assertAnalysis( 'comma',         'Bedell Street,133rd Avenue',   expected );
+    assertAnalysis( 'comma',         'Bedell Street ,133rd Avenue',  expected );
+    assertAnalysis( 'comma',         'Bedell Street, 133rd Avenue',  expected );
 
     suite.run( t.end );
   });
@@ -163,8 +167,8 @@ module.exports.tests.tokenizer = function(test, common){
 module.exports.tests.unicode = function(test, common){
   test( 'normalization', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasStreet' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasStreet' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     var latin_large_letter_e_with_acute = String.fromCodePoint(0x00C9);
@@ -191,6 +195,28 @@ module.exports.tests.unicode = function(test, common){
   });
 };
 
+module.exports.tests.germanic_street_suffixes = function (test, common) {
+  test('germanic_street_suffixes', function (t) {
+
+    var suite = new elastictest.Suite(common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind(null, suite, t, 'peliasStreet');
+    suite.action(function (done) { setTimeout(done, 500); }); // wait for es to bring some shards up
+
+    // Germanic street suffixes
+    assertAnalysis('straße', 'straße', ['0:strasse', '0:str']);
+    assertAnalysis('strasse', 'strasse', ['0:strasse', '0:str']);
+    assertAnalysis('str.', 'str.', ['0:str', '0:strasse']);
+    assertAnalysis('str', 'str', ['0:str', '0:strasse']);
+    assertAnalysis('brücke', 'brücke', [ '0:bruecke', '0:brucke', '0:br' ]);
+    assertAnalysis('bruecke', 'bruecke', [ '0:bruecke', '0:brucke', '0:br' ]);
+    assertAnalysis('brucke', 'brucke', ['0:brucke', '0:bruecke', '0:br']);
+    assertAnalysis('br.', 'br.', ['0:br', '0:branch', '0:bruecke', '0:brucke']);
+    assertAnalysis('br', 'br', ['0:br', '0:branch', '0:bruecke', '0:brucke']);
+
+    suite.run(t.end);
+  });
+};
+
 module.exports.all = function (tape, common) {
 
   function test(name, testFunction) {
@@ -201,23 +227,3 @@ module.exports.all = function (tape, common) {
     module.exports.tests[testCase](test, common);
   }
 };
-
-function analyze( suite, t, analyzer, comment, text, expected ){
-  suite.assert( function( done ){
-    suite.client.indices.analyze({
-      index: suite.props.index,
-      analyzer: analyzer,
-      text: text
-    }, function( err, res ){
-      if( err ) console.error( err );
-      t.deepEqual( simpleTokens( res.tokens ), expected, comment );
-      done();
-    });
-  });
-}
-
-function simpleTokens( tokens ){
-  return tokens.map( function( t ){
-    return t.token;
-  });
-}

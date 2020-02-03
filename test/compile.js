@@ -1,6 +1,16 @@
-var path = require('path'),
-    schema = require('../'),
-    fixture = require('./fixtures/expected.json');
+const _ = require('lodash');
+const path = require('path');
+const schema = require('../');
+const fixture = require('./fixtures/expected.json');
+const config = require('pelias-config').generate();
+
+const forEachDeep = (obj, cb) =>
+  _.forEach(obj, (val, key) => {
+    cb(val, key);
+    if (_.isPlainObject(val) || _.isArray(val)){
+      forEachDeep(val, cb);
+    }
+  });
 
 module.exports.tests = {};
 
@@ -12,22 +22,13 @@ module.exports.tests.compile = function(test, common) {
   });
 };
 
-// admin indeces are explicitly specified in order to specify a custom
+// admin indices are explicitly specified in order to specify a custom
 // dynamic_template and to avoid 'type not found' errors when deploying
 // the api codebase against an index without admin data
-module.exports.tests.indeces = function(test, common) {
-  test('contains "_default_" index definition', function(t) {
-    t.equal(typeof schema.mappings._default_, 'object', 'mappings present');
-    t.equal(schema.mappings._default_.dynamic_templates[0].nameGram.mapping.analyzer, 'peliasIndexOneEdgeGram');
-    t.end();
-  });
-  test('explicitly specify some admin indeces and their analyzer', function(t) {
-    t.equal(typeof schema.mappings.country, 'object', 'mappings present');
-    t.equal(schema.mappings.country.dynamic_templates[0].nameGram.mapping.analyzer, 'peliasIndexOneEdgeGram');
-    t.equal(typeof schema.mappings.region, 'object', 'mappings present');
-    t.equal(schema.mappings.region.dynamic_templates[0].nameGram.mapping.analyzer, 'peliasIndexOneEdgeGram');
-    t.equal(typeof schema.mappings.county, 'object', 'mappings present');
-    t.equal(schema.mappings.county.dynamic_templates[0].nameGram.mapping.analyzer, 'peliasIndexOneEdgeGram');
+module.exports.tests.indices = function(test, common) {
+  test('explicitly specify some admin indices and their analyzer', function(t) {
+    t.equal(typeof schema.mappings, 'object', 'mappings present');
+    t.equal(schema.mappings.dynamic_templates[0].nameGram.mapping.analyzer, 'peliasIndexOneEdgeGram');
     t.end();
   });
 };
@@ -35,17 +36,63 @@ module.exports.tests.indeces = function(test, common) {
 // some 'admin' types allow single edgeNGrams and so have a different dynamic_template
 module.exports.tests.dynamic_templates = function(test, common) {
   test('dynamic_templates: nameGram', function(t) {
-    t.equal(typeof schema.mappings.country.dynamic_templates[0].nameGram, 'object', 'nameGram template specified');
-    var template = schema.mappings.country.dynamic_templates[0].nameGram;
+    t.equal(typeof schema.mappings.dynamic_templates[0].nameGram, 'object', 'nameGram template specified');
+    var template = schema.mappings.dynamic_templates[0].nameGram;
     t.equal(template.path_match, 'name.*');
     t.equal(template.match_mapping_type, 'string');
     t.deepEqual(template.mapping, {
-      type: 'string',
+      type: 'text',
       analyzer: 'peliasIndexOneEdgeGram',
-      fielddata : {
-        format: "disabled"
-      }
+      search_analyzer: 'peliasQuery',
+      similarity: 'peliasDefaultSimilarity'
     });
+    t.end();
+  });
+  test('dynamic_templates: phrase', function (t) {
+    t.equal(typeof schema.mappings.dynamic_templates[1].phrase, 'object', 'phrase template specified');
+    var template = schema.mappings.dynamic_templates[1].phrase;
+    t.equal(template.path_match, 'phrase.*');
+    t.equal(template.match_mapping_type, 'string');
+    t.deepEqual(template.mapping, {
+      type: 'text',
+      analyzer: 'peliasPhrase',
+      search_analyzer: 'peliasQuery',
+      similarity: 'peliasDefaultSimilarity'
+    });
+    t.end();
+  });
+  test('dynamic_templates: addendum', function (t) {
+    t.equal(typeof schema.mappings.dynamic_templates[2].addendum, 'object', 'addendum template specified');
+    var template = schema.mappings.dynamic_templates[2].addendum;
+    t.equal(template.path_match, 'addendum.*');
+    t.equal(template.match_mapping_type, 'string');
+    t.deepEqual(template.mapping, {
+      type: 'keyword',
+      index: false,
+      doc_values: false
+    });
+    t.end();
+  });
+};
+
+// ensure both "analyzer" and "search_analyzer" are set for stringy fields
+module.exports.tests.analyzers = function (test, common) {
+  test('analyzers: ensure "analyzer" and "search_analyzer" are set', function (t) {
+
+    const stringyTypes = ['string', 'text'];
+    const stringyFields = [];
+
+    forEachDeep(schema, (value, key) => {
+      if (!_.isPlainObject(value)) { return; }
+      if (!stringyTypes.includes(_.get(value, 'type', ''))) { return; }
+      stringyFields.push({ key: key, value: value });
+    });
+
+    stringyFields.forEach(field => {
+      t.true(_.has(field.value, 'analyzer'), `analyzer not set on ${field.key}`)
+      t.true(_.has(field.value, 'search_analyzer'), `search_analyzer not set on ${field.key}`)
+    })
+
     t.end();
   });
 };
@@ -65,6 +112,11 @@ module.exports.tests.current_schema = function(test, common) {
 
     // code intentionally commented to allow quick debugging of expected.json
     // common.diff(schemaCopy, fixture);
+    // console.error( JSON.stringify( schemaCopy, null, 2 ) );
+
+    // code to write expected output to the fixture
+    // const fs = require('fs');
+    // fs.writeFileSync(path.resolve( __dirname + '/fixtures/expected.json' ), JSON.stringify(schemaCopy, null, 2));
 
     t.deepEqual(schemaCopy, fixture);
     t.end();

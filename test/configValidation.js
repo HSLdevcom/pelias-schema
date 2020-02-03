@@ -1,5 +1,3 @@
-'use strict';
-
 const tape = require('tape');
 
 const configValidation = require('../configValidation');
@@ -21,13 +19,26 @@ module.exports.tests.interface = function(test, common) {
 
   test('config without schema.indexName should throw error', function(t) {
     var config = {
-      schema: {},
+      schema: { typeName: 'example_type' },
       esclient: {}
     };
 
     t.throws(function() {
       configValidation.validate(config);
-    }, /"indexName" is required/, 'schema.indexName should exist');
+    }, /"schema.indexName" is required/, 'schema.indexName should exist');
+    t.end();
+
+  });
+
+  test('config without schema.typeName should throw error', function (t) {
+    var config = {
+      schema: { indexName: 'example_index' },
+      esclient: {}
+    };
+
+    t.throws(function () {
+      configValidation.validate(config);
+    }, /"schema.typeName" is required/, 'schema.typeName should exist');
     t.end();
 
   });
@@ -36,14 +47,35 @@ module.exports.tests.interface = function(test, common) {
     [null, 17, {}, [], false].forEach((value) => {
       var config = {
         schema: {
-          indexName: value
+          indexName: value,
+          typeName: 'example_type'
         },
         esclient: {}
       };
 
       t.throws(function() {
         configValidation.validate(config);
-      }, /"indexName" must be a string/, 'schema.indexName should be a string');
+      }, /"schema.indexName" must be a string/, 'schema.indexName should be a string');
+
+    });
+
+    t.end();
+
+  });
+
+  test('config with non-string schema.typeName should throw error', function (t) {
+    [null, 17, {}, [], false].forEach((value) => {
+      var config = {
+        schema: {
+          indexName: 'example_index',
+          typeName: value
+        },
+        esclient: {}
+      };
+
+      t.throws(function () {
+        configValidation.validate(config);
+      }, /"schema.typeName" must be a string/, 'schema.typeName should be a string');
 
     });
 
@@ -55,14 +87,15 @@ module.exports.tests.interface = function(test, common) {
     [null, 17, [], 'string', true].forEach((value) => {
       var config = {
         schema: {
-          indexName: 'index name'
+          indexName: 'example_index',
+          typeName: 'example_type'
         },
         esclient: value
       };
 
       t.throws(function() {
         configValidation.validate(config);
-      }, /"esclient" must be an object/, 'esclient should be an object');
+      }, /"esclient" must be of type object/, 'esclient should be an object');
 
     });
 
@@ -73,7 +106,8 @@ module.exports.tests.interface = function(test, common) {
   test('config with string schema.indexName and object esclient should not throw error', function(t) {
     var config = {
       schema: {
-        indexName: 'index name'
+        indexName: 'example_index',
+        typeName: 'example_type'
       },
       esclient: {}
     };

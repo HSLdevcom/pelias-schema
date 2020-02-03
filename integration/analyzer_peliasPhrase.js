@@ -1,17 +1,17 @@
 // validate analyzer is behaving as expected
 
-var tape = require('tape'),
-    elastictest = require('elastictest'),
-    schema = require('../schema'),
-    punctuation = require('../punctuation');
+const elastictest = require('elastictest');
+const punctuation = require('../punctuation');
+const config = require('pelias-config').generate();
+const getTotalHits = require('./_hits_total_helper');
 
 module.exports.tests = {};
 
 module.exports.tests.analyze = function(test, common){
   test( 'analyze', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasPhrase' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasPhrase' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     assertAnalysis( 'lowercase', 'F', ['f']);
@@ -21,10 +21,10 @@ module.exports.tests.analyze = function(test, common){
     assertAnalysis( 'asciifolding', 'ł', ['l']);
     assertAnalysis( 'asciifolding', 'ɰ', ['m']);
     assertAnalysis( 'trim', ' f ', ['f'] );
-    assertAnalysis( 'stop_words (disabled)', 'a st b ave c', ['a','st','b','ave','c'] );
-    assertAnalysis( 'ampersand', 'a and b', ['a','&','b'] );
-    assertAnalysis( 'ampersand', 'a & b', ['a','&','b'] );
-    assertAnalysis( 'ampersand', 'a and & and b', ['a','&','b'] );
+    assertAnalysis( 'stop_words (disabled)', 'a st b ave c', ['0:a', '1:st', '1:street', '2:b', '3:ave', '3:avenue', '3:av', '4:c'] );
+    assertAnalysis( 'ampersand', 'a and b', ['0:a', '1:and', '1:&', '2:b']);
+    assertAnalysis( 'ampersand', 'a & b', ['0:a', '1:&', '1:and', '1:und', '2:b']);
+    assertAnalysis( 'ampersand', 'a and & and b', ['0:a', '1:and', '1:&', '2:&', '2:and', '2:und', '3:and', '3:&', '4:b']);
     assertAnalysis( 'ampersand', 'land', ['land'] ); // should not replace inside tokens
 
     // @todo: handle multiple consecutive 'and'
@@ -35,17 +35,18 @@ module.exports.tests.analyze = function(test, common){
     assertAnalysis( 'no kstem', 'peoples', ['peoples'] );
 
     assertAnalysis( 'peliasShinglesFilter', '1 a ab abc abcdefghijk', ['1','a','ab','abc','abcdefghijk'] );
-    assertAnalysis( 'unique', '1 1 1', ['1'] );
+    assertAnalysis( 'unique', '1 1 1', ['1','1','1'] );
     assertAnalysis( 'notnull', ' ^ ', [] );
 
-    assertAnalysis( 'stem street suffixes', 'streets avenue', ['streets','ave'] );
-    assertAnalysis( 'stem street suffixes', 'boulevard roads', ['blvd','roads'] );
+    assertAnalysis( 'stem street suffixes', 'streets avenue', ['0:streets', '1:avenue', '1:ave', '1:av'] );
+    assertAnalysis( 'stem street suffixes', 'boulevard roads', ['0:boulevard', '0:blvd', '1:roads'] );
 
-    assertAnalysis( 'stem direction synonyms', 'south by southwest', ['s','by','sw'] );
-    assertAnalysis( 'stem direction synonyms', '20 bear road northeast', ['20','bear','rd','ne'] );
+    assertAnalysis( 'stem direction synonyms', 'south by southwest', ['0:south', '0:s', '1:by', '2:southwest', '2:sw'] );
+    assertAnalysis( 'stem direction synonyms', '20 bear road northeast', ['0:20', '1:bear', '2:road', '2:rd', '3:northeast', '3:ne'] );
 
     // remove punctuation (handled by the char_filter)
-    assertAnalysis( 'punctuation', punctuation.all.join(''), [ '-&' ] );
+    assertAnalysis( 'punctuation', punctuation.all.join(''), ['0:&', '0:and', '0:und'] );
+    assertAnalysis( 'punctuation', 'Hawai‘i', ['hawaii'] );
 
     suite.run( t.end );
   });
@@ -54,41 +55,45 @@ module.exports.tests.analyze = function(test, common){
 module.exports.tests.functional = function(test, common){
   test( 'functional', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasPhrase' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasPhrase' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     assertAnalysis( 'country', 'Trinidad and Tobago', [
-      'trinidad', '&', 'tobago'
+      '0:trinidad', '1:and', '1:&', '2:tobago'
     ]);
 
     assertAnalysis( 'place', 'Toys "R" Us!', [
       'toys', 'r', 'us'
     ]);
 
-    assertAnalysis( 'address', '101 mapzen pl', [
-      '101', 'mapzen', 'pl'
+    assertAnalysis( 'address', '101 geocode pl', [
+      '0:101', '1:geocode', '2:pl', '2:place', '2:platz'
     ]);
 
     // both terms should map to same tokens
-    var expected1 = [ '325', 'n', '12th', 'st' ];
+    var expected1 = [ '0:325', '1:n', '1:north', '2:12', '3:st', '3:street' ];
+    var expected2 = [ '0:325', '1:north', '1:n', '2:12', '3:street', '3:st' ];
     assertAnalysis( 'address', '325 N 12th St', expected1 );
-    assertAnalysis( 'address', '325 North 12th Street', expected1 );
+    assertAnalysis( 'address', '325 North 12th Street', expected2 );
 
     // both terms should map to same tokens
-    var expected2 = [ '13509', 'colfax', 'ave', 's' ];
-    assertAnalysis( 'address', '13509 Colfax Ave S', expected2 );
-    assertAnalysis( 'address', '13509 Colfax Avenue South', expected2 );
+    var expected3 = [ '0:13509', '1:colfax', '2:ave', '2:avenue', '2:av', '3:s', '3:south', '3:see' ];
+    var expected4 = [ '0:13509', '1:colfax', '2:avenue', '2:ave', '2:av', '3:south', '3:s' ];
+    assertAnalysis( 'address', '13509 Colfax Ave S', expected3 );
+    assertAnalysis( 'address', '13509 Colfax Avenue South', expected4 );
 
     // both terms should map to same tokens
-    var expected3 = [ '100', 's', 'lake', 'dr' ];
-    assertAnalysis( 'address', '100 S Lake Dr', expected3 );
-    assertAnalysis( 'address', '100 South Lake Drive', expected3 );
+    var expected5 = [ '0:100', '1:s', '1:south', '1:see', '2:lake', '2:lk', '3:dr', '3:drive' ];
+    var expected6 = [ '0:100', '1:south', '1:s', '2:lake', '2:lk', '3:drive', '3:dr' ];
+    assertAnalysis( 'address', '100 S Lake Dr', expected5 );
+    assertAnalysis( 'address', '100 South Lake Drive', expected6 );
 
     // both terms should map to same tokens
-    var expected4 = [ '100', 'nw', 'hwy' ];
-    assertAnalysis( 'address', '100 northwest highway', expected4 );
-    assertAnalysis( 'address', '100 nw hwy', expected4 );
+    var expected7 = [ '0:100', '1:northwest', '1:nw', '2:highway', '2:hwy' ];
+    var expected8 = [ '0:100', '1:nw', '1:northwest', '2:hwy', '2:highway' ];
+    assertAnalysis( 'address', '100 northwest highway', expected7 );
+    assertAnalysis( 'address', '100 nw hwy', expected8 );
 
     suite.run( t.end );
   });
@@ -97,23 +102,22 @@ module.exports.tests.functional = function(test, common){
 module.exports.tests.tokenizer = function(test, common){
   test( 'tokenizer', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasPhrase' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasPhrase' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
-    // specify 2 parts with a delimeter
-    assertAnalysis( 'forward slash', 'Bedell Street/133rd Avenue',   [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'forward slash', 'Bedell Street /133rd Avenue',  [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'forward slash', 'Bedell Street/ 133rd Avenue',  [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'back slash',    'Bedell Street\\133rd Avenue',  [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'back slash',    'Bedell Street \\133rd Avenue', [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'back slash',    'Bedell Street\\ 133rd Avenue', [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'comma',         'Bedell Street,133rd Avenue',   [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'comma',         'Bedell Street ,133rd Avenue',  [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'comma',         'Bedell Street, 133rd Avenue',  [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'space',         'Bedell Street,133rd Avenue',   [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'space',         'Bedell Street ,133rd Avenue',  [ 'bedell', 'st', '133rd', 'ave' ]);
-    assertAnalysis( 'space',         'Bedell Street, 133rd Avenue',  [ 'bedell', 'st', '133rd', 'ave' ]);
+    var expected = [ '0:bedell', '1:street', '1:st', '2:133', '3:avenue', '3:ave', '3:av' ];
+
+    // specify 2 streets with a delimeter
+    assertAnalysis( 'forward slash', 'Bedell Street/133rd Avenue',   expected );
+    assertAnalysis( 'forward slash', 'Bedell Street /133rd Avenue',  expected );
+    assertAnalysis( 'forward slash', 'Bedell Street/ 133rd Avenue',  expected );
+    assertAnalysis( 'back slash',    'Bedell Street\\133rd Avenue',  expected );
+    assertAnalysis( 'back slash',    'Bedell Street \\133rd Avenue', expected );
+    assertAnalysis( 'back slash',    'Bedell Street\\ 133rd Avenue', expected );
+    assertAnalysis( 'comma',         'Bedell Street,133rd Avenue',   expected );
+    assertAnalysis( 'comma',         'Bedell Street ,133rd Avenue',  expected );
+    assertAnalysis( 'comma',         'Bedell Street, 133rd Avenue',  expected );
 
     suite.run( t.end );
   });
@@ -124,8 +128,8 @@ module.exports.tests.tokenizer = function(test, common){
 module.exports.tests.slop = function(test, common){
   test( 'slop', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasPhrase' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasPhrase' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // no index-time slop operations performed
@@ -142,15 +146,15 @@ module.exports.tests.slop = function(test, common){
 module.exports.tests.slop_query = function(test, common){
   test( 'slop query', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasPhrase' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasPhrase' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index 'Lake Cayuga'
     suite.action( function( done ){
       suite.client.index({
         index: suite.props.index,
-        type: 'mytype',
+        type: config.schema.typeName,
         id: '1',
         body: { name: { default: 'Lake Cayuga' }, phrase: { default: 'Lake Cayuga' } }
       }, done );
@@ -160,7 +164,7 @@ module.exports.tests.slop_query = function(test, common){
     suite.action( function( done ){
       suite.client.index({
         index: suite.props.index,
-        type: 'mytype',
+        type: config.schema.typeName,
         id: '2',
         body: { name: { default: 'Cayuga Lake' }, phrase: { default: 'Cayuga Lake' } }
       }, done );
@@ -170,7 +174,7 @@ module.exports.tests.slop_query = function(test, common){
     suite.action( function( done ){
       suite.client.index({
         index: suite.props.index,
-        type: 'mytype',
+        type: config.schema.typeName,
         id: '3',
         body: { name: { default: '7991 Lake Cayuga Dr' }, phrase: { default: '7991 Lake Cayuga Dr' } }
       }, done );
@@ -191,10 +195,9 @@ module.exports.tests.slop_query = function(test, common){
             ],
             'should': [
               {
-                'match': {
+                'match_phrase': {
                   'phrase.default': {
                     'query': i,
-                    'type': 'phrase',
                     'slop': 2
                   }
                 }
@@ -208,11 +211,11 @@ module.exports.tests.slop_query = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'mytype',
+        type: config.schema.typeName,
         searchType: 'dfs_query_then_fetch',
         body: buildQuery('Lake Cayuga')
       }, function( err, res ){
-        t.equal( res.hits.total, 3 );
+        t.equal( getTotalHits(res.hits), 3 );
         var hits = res.hits.hits;
 
         t.equal( hits[0]._source.name.default, 'Lake Cayuga' );
@@ -239,14 +242,14 @@ module.exports.tests.slop_query = function(test, common){
 module.exports.tests.slop = function(test, common){
   test( 'slop', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index a document
     suite.action( function( done ){
       suite.client.index({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         id: '1',
         body: { name: { default: '52 Görlitzer Straße' } }
       }, done);
@@ -259,19 +262,18 @@ module.exports.tests.slop = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         searchType: 'dfs_query_then_fetch',
-        body: { query: { match: {
+        body: { query: { match_phrase: {
           'name.default': {
             'analyzer': 'peliasPhrase',
             'query': 'Görlitzer Straße 52',
-            'type': 'phrase',
             'slop': 3,
           }
         }}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'document found' );
+        t.equal( getTotalHits(res.hits), 1, 'document found' );
         done();
       });
     });
@@ -284,8 +286,8 @@ module.exports.tests.slop = function(test, common){
 module.exports.tests.unicode = function(test, common){
   test( 'normalization', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
-    var assertAnalysis = analyze.bind( null, suite, t, 'peliasPhrase' );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
+    var assertAnalysis = common.analyze.bind( null, suite, t, 'peliasPhrase' );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     var latin_large_letter_e_with_acute = String.fromCodePoint(0x00C9);
@@ -322,23 +324,3 @@ module.exports.all = function (tape, common) {
     module.exports.tests[testCase](test, common);
   }
 };
-
-function analyze( suite, t, analyzer, comment, text, expected ){
-  suite.assert( function( done ){
-    suite.client.indices.analyze({
-      index: suite.props.index,
-      analyzer: analyzer,
-      text: text
-    }, function( err, res ){
-      if( err ) console.error( err );
-      t.deepEqual( simpleTokens( res.tokens ), expected, comment );
-      done();
-    });
-  });
-}
-
-function simpleTokens( tokens ){
-  return tokens.map( function( t ){
-    return t.token;
-  });
-}

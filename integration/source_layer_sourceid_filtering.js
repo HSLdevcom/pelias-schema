@@ -1,43 +1,42 @@
 // validate analyzer is behaving as expected
 
-var tape = require('tape'),
-    elastictest = require('elastictest'),
-    schema = require('../schema'),
-    punctuation = require('../punctuation');
+const elastictest = require('elastictest');
+const config = require('pelias-config').generate();
+const getTotalHits = require('./_hits_total_helper');
 
 module.exports.tests = {};
 
 module.exports.tests.source_filter = function(test, common){
   test( 'source filter', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index some docs
     suite.action( function( done ){
       suite.client.index({
-        index: suite.props.index, type: 'test',
+        index: suite.props.index, type: config.schema.typeName,
         id: '1', body: { source: 'osm', layer: 'node', source_id: 'dataset/1' }
       }, done );
     });
 
     suite.action( function( done ){
       suite.client.index({
-        index: suite.props.index, type: 'test',
+        index: suite.props.index, type: config.schema.typeName,
         id: '2', body: { source: 'osm', layer: 'address', source_id: 'dataset/2' }
       }, done );
     });
 
     suite.action( function( done ){
       suite.client.index({
-        index: suite.props.index, type: 'test',
+        index: suite.props.index, type: config.schema.typeName,
         id: '3', body: { source: 'geonames', layer: 'address', source_id: 'dataset/1' }
       }, done );
     });
 
     suite.action( function( done ){
       suite.client.index({
-        index: suite.props.index, type: 'test',
+        index: suite.props.index, type: config.schema.typeName,
         id: '4', body: { source: 'foo bar baz' }
       }, done );
     });
@@ -46,14 +45,14 @@ module.exports.tests.source_filter = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: {
           term: {
             source: 'osm'
           }
         }}
       }, function( err, res ){
-        t.equal( res.hits.total, 2 );
+        t.equal( getTotalHits(res.hits), 2 );
         done();
       });
     });
@@ -62,14 +61,14 @@ module.exports.tests.source_filter = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: {
           term: {
             layer: 'address'
           }
         }}
       }, function( err, res ){
-        t.equal( res.hits.total, 2 );
+        t.equal( getTotalHits(res.hits), 2 );
         done();
       });
     });
@@ -78,14 +77,14 @@ module.exports.tests.source_filter = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: {
           term: {
             source_id: 'dataset/1'
           }
         }}
       }, function( err, res ){
-        t.equal( res.hits.total, 2 );
+        t.equal( getTotalHits(res.hits), 2 );
         done();
       });
     });
@@ -94,13 +93,13 @@ module.exports.tests.source_filter = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
           { term: { source: 'osm' } },
           { term: { source_id: 'dataset/1' } }
         ]}}}
       }, function( err, res ){
-        t.equal( res.hits.total, 1 );
+        t.equal( getTotalHits(res.hits), 1 );
         done();
       });
     });
@@ -109,14 +108,14 @@ module.exports.tests.source_filter = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: {
           term: {
             source: 'OSM'
           }
         }}
       }, function( err, res ){
-        t.equal( res.hits.total, 0 );
+        t.equal( getTotalHits(res.hits), 0 );
         done();
       });
     });
@@ -125,14 +124,14 @@ module.exports.tests.source_filter = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: {
           term: {
             source: 'foo'
           }
         }}
       }, function( err, res ){
-        t.equal( res.hits.total, 0 );
+        t.equal( getTotalHits(res.hits), 0 );
         done();
       });
     });
@@ -141,14 +140,14 @@ module.exports.tests.source_filter = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: {
           term: {
             source: 'foo bar baz'
           }
         }}
       }, function( err, res ){
-        t.equal( res.hits.total, 1 );
+        t.equal( getTotalHits(res.hits), 1 );
         done();
       });
     });

@@ -1,22 +1,22 @@
 // validate analyzer is behaving as expected
 
-var tape = require('tape'),
-    elastictest = require('elastictest'),
-    schema = require('../schema'),
-    punctuation = require('../punctuation');
+const elastictest = require('elastictest');
+const config = require('pelias-config').generate();
+const getTotalHits = require('./_hits_total_helper');
 
 module.exports.tests = {};
 
 module.exports.tests.functional = function(test, common){
   test( 'functional', function(t){
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index some docs
     suite.action( function( done ){
       suite.client.index({
-        index: suite.props.index, type: 'test',
+        index: suite.props.index,
+        type: config.schema.typeName,
         id: '1', body: { address_parts: {
           name: 'Mapzen HQ',
           number: 30,
@@ -28,7 +28,8 @@ module.exports.tests.functional = function(test, common){
 
     suite.action( function( done ){
       suite.client.index({
-        index: suite.props.index, type: 'test',
+        index: suite.props.index,
+        type: config.schema.typeName,
         id: '2', body: { address_parts: {
           name: 'Fake Venue',
           number: 300,
@@ -40,7 +41,8 @@ module.exports.tests.functional = function(test, common){
 
     suite.action( function( done ){
       suite.client.index({
-        index: suite.props.index, type: 'test',
+        index: suite.props.index,
+        type: config.schema.typeName,
         id: '3', body: { address_parts: {
           name: 'Mock British Address',
           number: 3000,
@@ -50,17 +52,30 @@ module.exports.tests.functional = function(test, common){
       }, done );
     });
 
+    suite.action( function( done ){
+      suite.client.index({
+        index: suite.props.index,
+        type: config.schema.typeName,
+        id: '4', body: { address_parts: {
+          name: 'Mystery Location',
+          number: 300,
+          street: 'east 26th street',
+          zip: '100 10'
+        }}
+      }, done );
+    });
+
     // search by street number
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
           { match: { 'address_parts.number': 30 } }
         ]}}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'match street number' );
+        t.equal( getTotalHits(res.hits), 1, 'match street number' );
         done();
       });
     });
@@ -69,13 +84,13 @@ module.exports.tests.functional = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
-          { match: { 'address_parts.street': 'west 26th street' } }
+          { match_phrase: { 'address_parts.street': 'west 26th street' } }
         ]}}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 2, 'match street name' );
+        t.equal( getTotalHits(res.hits), 2, 'match street name' );
         done();
       });
     });
@@ -84,13 +99,13 @@ module.exports.tests.functional = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
-          { match: { 'address_parts.street': 'W 26th ST' } }
+          { match_phrase: { 'address_parts.street': 'W 26th ST' } }
         ]}}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 2, 'match street name - abbr' );
+        t.equal( getTotalHits(res.hits), 2, 'match street name - abbr' );
         done();
       });
     });
@@ -99,13 +114,13 @@ module.exports.tests.functional = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
           { match: { 'address_parts.zip': '10010' } }
         ]}}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 2, 'match zip - numeric' );
+        t.equal( getTotalHits(res.hits), 3, 'match zip - numeric' );
         done();
       });
     });
@@ -114,13 +129,13 @@ module.exports.tests.functional = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
           { match: { 'address_parts.zip': 'e24dn' } }
         ]}}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'match zip - string' );
+        t.equal( getTotalHits(res.hits), 1, 'match zip - string' );
         done();
       });
     });
@@ -129,13 +144,13 @@ module.exports.tests.functional = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
           { match: { 'address_parts.zip': '100-10' } }
         ]}}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 2, 'match zip - numeric - punct' );
+        t.equal( getTotalHits(res.hits), 3, 'match zip - numeric - punct' );
         done();
       });
     });
@@ -144,13 +159,13 @@ module.exports.tests.functional = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
           { match: { 'address_parts.zip': '10 0 10' } }
         ]}}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 2, 'match zip - numeric - whitespace' );
+        t.equal( getTotalHits(res.hits), 3, 'match zip - numeric - whitespace' );
         done();
       });
     });
@@ -159,13 +174,13 @@ module.exports.tests.functional = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
           { match: { 'address_parts.zip': 'E2-4DN' } }
         ]}}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'match zip - string - punct' );
+        t.equal( getTotalHits(res.hits), 1, 'match zip - string - punct' );
         done();
       });
     });
@@ -174,13 +189,13 @@ module.exports.tests.functional = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         body: { query: { bool: { must: [
           { match: { 'address_parts.zip': 'E2  4DN' } }
         ]}}}
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, 1, 'match zip - string - whitespace' );
+        t.equal( getTotalHits(res.hits), 1, 'match zip - string - whitespace' );
         done();
       });
     });
@@ -202,13 +217,14 @@ module.exports.tests.venue_vs_address = function(test, common){
     // Unfortunately there seems to be no easy way of fixing this, it's an artifact of us
     // storing the street names in the name.default field.
 
-    var suite = new elastictest.Suite( common.clientOpts, { schema: schema } );
+    var suite = new elastictest.Suite( common.clientOpts, common.create );
     suite.action( function( done ){ setTimeout( done, 500 ); }); // wait for es to bring some shards up
 
     // index a venue
     suite.action( function( done ){
       suite.client.index({
-        index: suite.props.index, type: 'test',
+        index: suite.props.index,
+        type: config.schema.typeName,
         id: '1', body: {
           name: { default: 'Union Square' },
           phrase: { default: 'Union Square' }
@@ -222,7 +238,8 @@ module.exports.tests.venue_vs_address = function(test, common){
       return function( done ){
         let id = i + 100; // id offset
         suite.client.index({
-          index: suite.props.index, type: 'test',
+          index: suite.props.index,
+          type: config.schema.typeName,
           id: String(id),
           body: {
             name: { default: `${id} Union Square` },
@@ -246,7 +263,7 @@ module.exports.tests.venue_vs_address = function(test, common){
     suite.assert( function( done ){
       suite.client.search({
         index: suite.props.index,
-        type: 'test',
+        type: config.schema.typeName,
         searchType: 'dfs_query_then_fetch',
         size: TOTAL_ADDRESS_DOCS+1,
         body: {
@@ -254,10 +271,9 @@ module.exports.tests.venue_vs_address = function(test, common){
             'bool': {
               'must': [
                 {
-                  'match': {
+                  'match_phrase': {
                     'name.default': {
-                      'analyzer': 'peliasQueryFullToken',
-                      'type': 'phrase',
+                      'analyzer': 'peliasQuery',
                       'boost': 1,
                       'slop': 3,
                       'query': 'union square'
@@ -276,10 +292,9 @@ module.exports.tests.venue_vs_address = function(test, common){
                   }
                 },
                 {
-                  'match': {
+                  'match_phrase': {
                     'phrase.default': {
                       'analyzer': 'peliasPhrase',
-                      'type': 'phrase',
                       'boost': 1,
                       'slop': 3,
                       'query': 'union square'
@@ -292,7 +307,7 @@ module.exports.tests.venue_vs_address = function(test, common){
         }
       }, function( err, res ){
         t.equal( err, undefined );
-        t.equal( res.hits.total, TOTAL_ADDRESS_DOCS+1, 'matched all docs' );
+        t.equal( getTotalHits(res.hits), TOTAL_ADDRESS_DOCS+1, 'matched all docs' );
         t.equal( res.hits.hits[TOTAL_ADDRESS_DOCS]._id, '1', 'exact name match first' );
         done();
       });

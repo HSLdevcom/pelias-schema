@@ -1,4 +1,5 @@
-var schema = require('../mappings/document');
+const _ = require('lodash');
+const schema = require('../mappings/document');
 
 module.exports.tests = {};
 
@@ -22,7 +23,7 @@ module.exports.tests.properties = function(test, common) {
 module.exports.tests.fields = function(test, common) {
   var fields = ['source', 'layer', 'name', 'phrase', 'address_parts',
     'parent', 'center_point', 'shape', 'bounding_box', 'source_id', 'category',
-    'population', 'popularity'];
+    'population', 'popularity', 'addendum'];
   test('fields specified', function(t) {
     t.deepEqual(Object.keys(schema.properties), fields);
     t.end();
@@ -31,7 +32,7 @@ module.exports.tests.fields = function(test, common) {
 
 // should contain the correct address field definitions
 module.exports.tests.address_fields = function(test, common) {
-  var fields = ['name','unit','number','street','zip'];
+  var fields = ['name','unit','number','street','cross_street','zip'];
   test('address fields specified', function(t) {
     t.deepEqual(Object.keys(schema.properties.address_parts.properties), fields);
     t.end();
@@ -46,29 +47,33 @@ module.exports.tests.address_analysis = function(test, common) {
   // $name analysis is pretty basic, work can be done to improve this, although
   // at time of writing this field was not used by any API queries.
   test('name', function(t) {
-    t.equal(prop.name.type, 'string');
+    t.equal(prop.name.type, 'text');
     t.equal(prop.name.analyzer, 'keyword');
+    t.equal(prop.name.search_analyzer, 'keyword');
     t.end();
   });
 
   // $unit analysis
   test('unit', function(t) {
-    t.equal(prop.unit.type, 'string');
-    t.equal(prop.unit.analyzer, 'peliasUnit');
+    t.equal(prop.unit.type, 'text', 'unit has full text type');
+    t.equal(prop.unit.analyzer, 'peliasUnit', 'unit analyzer is peliasUnit');
+    t.equal(prop.unit.search_analyzer, 'peliasUnit', 'unit search_analyzer is peliasUnit');
     t.end();
   });
 
   // $number analysis is discussed in: https://github.com/pelias/schema/pull/77
   test('number', function(t) {
-    t.equal(prop.number.type, 'string');
+    t.equal(prop.number.type, 'text');
     t.equal(prop.number.analyzer, 'peliasHousenumber');
+    t.equal(prop.number.search_analyzer, 'peliasHousenumber');
     t.end();
   });
 
   // $street analysis is discussed in: https://github.com/pelias/schema/pull/77
   test('street', function(t) {
-    t.equal(prop.street.type, 'string');
+    t.equal(prop.street.type, 'text');
     t.equal(prop.street.analyzer, 'peliasStreet');
+    t.equal(prop.street.search_analyzer, 'peliasStreet');
     t.end();
   });
 
@@ -76,8 +81,9 @@ module.exports.tests.address_analysis = function(test, common) {
   // note: this is a poor name, it would be better to rename this field to a more
   // generic term such as $postalcode as it is not specific to the USA.
   test('zip', function(t) {
-    t.equal(prop.zip.type, 'string');
+    t.equal(prop.zip.type, 'text');
     t.equal(prop.zip.analyzer, 'peliasZip');
+    t.equal(prop.zip.search_analyzer, 'peliasZip');
     t.end();
   });
 };
@@ -85,24 +91,26 @@ module.exports.tests.address_analysis = function(test, common) {
 // should contain the correct parent field definitions
 module.exports.tests.parent_fields = function(test, common) {
   var fields = [
-    'continent',      'continent_a',      'continent_id',
-    'ocean',          'ocean_a',          'ocean_id',
-    'empire',         'empire_a',         'empire_id',
-    'country',        'country_a',        'country_id',
-    'dependency',     'dependency_a',     'dependency_id',
-    'marinearea',     'marinearea_a',     'marinearea_id',
-    'macroregion',    'macroregion_a',    'macroregion_id',
-    'region',         'region_a',         'region_id',
-    'macrocounty',    'macrocounty_a',    'macrocounty_id',
-    'county',         'county_a',         'county_id',
-    'locality',       'locality_a',       'locality_id',
-    'borough',        'borough_a',        'borough_id',
-    'localadmin',     'localadmin_a',     'localadmin_id',
-    'neighbourhood',  'neighbourhood_a',  'neighbourhood_id',
-    'postalcode',     'postalcode_a',     'postalcode_id'
+    'continent',      'continent_a',      'continent_id',     'continent.fields.ngram',
+    'ocean',          'ocean_a',          'ocean_id',         'ocean.fields.ngram',
+    'empire',         'empire_a',         'empire_id',        'empire.fields.ngram',
+    'country',        'country_a',        'country_id',       'country.fields.ngram',
+    'dependency',     'dependency_a',     'dependency_id',    'dependency.fields.ngram',
+    'marinearea',     'marinearea_a',     'marinearea_id',    'marinearea.fields.ngram',
+    'macroregion',    'macroregion_a',    'macroregion_id',   'macroregion.fields.ngram',
+    'region',         'region_a',         'region_id',        'region.fields.ngram',
+    'macrocounty',    'macrocounty_a',    'macrocounty_id',   'macrocounty.fields.ngram',
+    'county',         'county_a',         'county_id',        'county.fields.ngram',
+    'locality',       'locality_a',       'locality_id',      'locality.fields.ngram',
+    'borough',        'borough_a',        'borough_id',       'borough.fields.ngram',
+    'localadmin',     'localadmin_a',     'localadmin_id',    'localadmin.fields.ngram',
+    'neighbourhood',  'neighbourhood_a',  'neighbourhood_id', 'neighbourhood.fields.ngram',
+    'postalcode',     'postalcode_a',     'postalcode_id',    'postalcode.fields.ngram'
   ];
   test('parent fields specified', function(t) {
-    t.deepEqual(Object.keys(schema.properties.parent.properties), fields);
+    fields.forEach( expected => {
+      t.true( _.has( schema.properties.parent.properties, expected ), expected );
+    });
     t.end();
   });
 };
@@ -111,27 +119,39 @@ module.exports.tests.parent_fields = function(test, common) {
 // ref: https://github.com/pelias/schema/pull/95
 module.exports.tests.parent_analysis = function(test, common) {
   var prop = schema.properties.parent.properties;
-  var fields = ['country','region','county','locality','localadmin','neighbourhood'];
+  var fields = [
+    'continent', 'ocean', 'empire', 'country', 'dependency', 'marinearea',
+    'macroregion', 'region', 'macrocounty', 'county', 'locality', 'borough',
+    'localadmin', 'neighbourhood'
+  ];
   fields.forEach( function( field ){
     test(field, function(t) {
-      t.equal(prop[field].type, 'string');
-      t.equal(prop[field].analyzer, 'peliasAdmin');
-      t.equal(prop[field+'_a'].type, 'string');
-      t.equal(prop[field+'_a'].analyzer, 'peliasAdmin');
-      t.equal(prop[field+'_id'].type, 'string');
-      t.equal(prop[field+'_id'].index, 'not_analyzed');
+      t.equal(prop[field].type, 'text', `${field} is set to text type`);
+      t.equal(prop[field].analyzer, 'peliasAdmin', `${field} analyzer is peliasAdmin`);
+      t.equal(prop[field+'_a'].type, 'text', `${field}_a type is text`);
+      t.equal(prop[field+'_a'].analyzer, 'peliasAdmin', `${field}_a analyzer is peliasAdmin`);
+      t.equal(prop[field+'_a'].search_analyzer, 'peliasAdmin', `${field}_a analyzer is peliasAdmin`);
+      t.equal(prop[field+'_id'].type, 'keyword', `${field}_id type is keyword`);
+      t.equal(prop[field+'_id'].index, undefined, `${field}_id index left at default`);
+
+      // subfields
+      t.equal(prop[field].fields.ngram.type, 'text', `${field}.ngram type is full text`);
+      t.equal(prop[field].fields.ngram.analyzer, 'peliasIndexOneEdgeGram', `${field}.ngram analyzer is peliasIndexOneEdgeGram`);
+      t.equal(prop[field].fields.ngram.search_analyzer, 'peliasAdmin', `${field}.ngram analyzer is peliasIndexOneEdgeGram`);
 
       t.end();
     });
   });
 
   test('postalcode', function(t) {
-    t.equal(prop['postalcode'].type, 'string');
-    t.equal(prop['postalcode'].analyzer, 'peliasZip');
-    t.equal(prop['postalcode'+'_a'].type, 'string');
-    t.equal(prop['postalcode'+'_a'].analyzer, 'peliasZip');
-    t.equal(prop['postalcode'+'_id'].type, 'string');
-    t.equal(prop['postalcode'+'_id'].index, 'not_analyzed');
+    t.equal(prop['postalcode'].type, 'text', 'postalcode is full text field');
+    t.equal(prop['postalcode'].analyzer, 'peliasZip', 'postalcode analyzer is peliasZip');
+    t.equal(prop['postalcode'].search_analyzer, 'peliasZip', 'postalcode analyzer is peliasZip');
+    t.equal(prop['postalcode'+'_a'].type, 'text', 'postalcode_a is full text field');
+    t.equal(prop['postalcode'+'_a'].analyzer, 'peliasZip', 'postalcode_a analyzer is peliasZip');
+    t.equal(prop['postalcode'+'_a'].search_analyzer, 'peliasZip', 'postalcode_a analyzer is peliasZip');
+    t.equal(prop['postalcode'+'_id'].type, 'keyword', 'postalcode_id field is keyword type');
+    t.equal(prop['postalcode'+'_id'].index, undefined, 'postalcode_id index left at default');
 
     t.end();
   });
@@ -143,13 +163,10 @@ module.exports.tests.dynamic_templates = function(test, common) {
     var template = schema.dynamic_templates[0].nameGram;
     t.equal(template.path_match, 'name.*');
     t.equal(template.match_mapping_type, 'string');
-    t.deepEqual(template.mapping, {
-      type: 'string',
-      analyzer: 'peliasIndexOneEdgeGram',
-      fielddata : {
-        format: "disabled"
-      }
-    });
+    t.equal(template.mapping.type, 'text', 'set to full text type');
+    t.equal(template.mapping.fielddata, undefined, 'fielddata is left to default (disabled)');
+    t.equal(template.mapping.analyzer, 'peliasIndexOneEdgeGram', 'analyzer set');
+    t.equal(template.mapping.search_analyzer, 'peliasQuery', 'search_analyzer set');
     t.end();
   });
   test('dynamic_templates: phrase', function(t) {
@@ -157,13 +174,10 @@ module.exports.tests.dynamic_templates = function(test, common) {
     var template = schema.dynamic_templates[1].phrase;
     t.equal(template.path_match, 'phrase.*');
     t.equal(template.match_mapping_type, 'string');
-    t.deepEqual(template.mapping, {
-      type: 'string',
-      analyzer: 'peliasPhrase',
-      fielddata : {
-        format: "disabled"
-      }
-    });
+    t.equal(template.mapping.type, 'text', 'set to full text type');
+    t.equal(template.mapping.fielddata, undefined, 'fielddata is left to default (disabled)');
+    t.equal(template.mapping.analyzer, 'peliasPhrase', 'analyzer set');
+    t.equal(template.mapping.search_analyzer, 'peliasQuery', 'search_analyzer set');
     t.end();
   });
 };
@@ -171,7 +185,7 @@ module.exports.tests.dynamic_templates = function(test, common) {
 // _all should be disabled
 module.exports.tests.all_disabled = function(test, common) {
   test('_all disabled', function(t) {
-    t.equal(schema._all.enabled, false, '_all disabled');
+    t.false(schema._all, '_all undefined');
     t.end();
   });
 };
