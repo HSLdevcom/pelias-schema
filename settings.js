@@ -72,7 +72,6 @@ function generate(){
             "directionals",
             "ampersand",
             "remove_ordinals",
-            "removeAllZeroNumericPrefix",
             "peliasOneEdgeGramFilter",
             "unique_only_same_position",
             "notnull",
@@ -88,7 +87,6 @@ function generate(){
             "lowercase",
             "trim",
             "remove_ordinals",
-            "removeAllZeroNumericPrefix",
             "unique_only_same_position",
             "notnull"
           ]
