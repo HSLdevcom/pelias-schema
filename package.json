@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@hapi/joi": "^16.1.8",
-    "colors": "^1.1.2",
+    "colors": "1.4.0",
     "elasticsearch": "^16.0.0",
     "lodash": "^4.17.15",
     "pelias-config": "^4.8.0",
