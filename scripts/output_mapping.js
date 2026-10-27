@@ -1,6 +1,4 @@
 var config = require('pelias-config').generate();
-var es = require('elasticsearch');
-var client = new es.Client(config.esclient);
 var schema = require('../schema');
 
 var _index = ( process.argv.length > 3 ) ? process.argv[3] : config.schema.indexName;

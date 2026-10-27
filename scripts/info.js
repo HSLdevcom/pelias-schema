@@ -1,5 +1,8 @@
 var config = require('pelias-config').generate().esclient;
-var es = require('elasticsearch');
-var client = new es.Client(config);
+var { Client } = require('@elastic/elasticsearch');
+var esClientOptions = require('./esClientOptions');
+var client = new Client(esClientOptions(config));
 
-client.info( {}, console.log.bind(console) );
+client.info( {}, function( err, result ){
+  console.log( err, result && result.body );
+});

@@ -23,9 +23,9 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^7.17.14",
     "@hapi/joi": "^17.1.1",
     "colors": "1.4.0",
-    "elasticsearch": "^16.7.3",
     "lodash": "^4.17.21",
     "pelias-config": "^4.8.0",
     "pelias-logger": "^2.0.0",

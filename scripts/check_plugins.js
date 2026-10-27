@@ -1,7 +1,8 @@
 const colors = require('colors/safe');
 const config = require('pelias-config').generate();
-const es = require('elasticsearch');
-const client = new es.Client(config.esclient);
+const { Client } = require('@elastic/elasticsearch');
+const esClientOptions = require('./esClientOptions');
+const client = new Client(esClientOptions(config.esclient));
 const cli = require('./cli');
 
 // mandatory plugins
@@ -20,7 +21,8 @@ function elasticsearchPluginUtility() {
 }
 
 cli.header("checking elasticsearch plugins");
-client.nodes.info(null, (err, res) => {
+client.nodes.info({}, (err, result) => {
+  const res = result && result.body;
 
   if( err ){
     console.error(err);
