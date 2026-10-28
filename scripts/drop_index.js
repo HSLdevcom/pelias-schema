@@ -1,7 +1,8 @@
 const colors = require('colors/safe');
 const config = require('pelias-config').generate();
-const es = require('elasticsearch');
-const client = new es.Client(config.esclient);
+const { Client } = require('@elastic/elasticsearch');
+const esClientOptions = require('./esClientOptions');
+const client = new Client(esClientOptions(config.esclient));
 const readline = require('readline');
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
@@ -11,9 +12,10 @@ else { prompt(drop, fail); }
 
 function drop() {
   const req = { index: config.schema.indexName };
-  client.indices.delete(req, (err, res) => {
+  client.indices.delete(req, (err, result) => {
+    const res = result && result.body;
     console.log('\n[delete mapping]', '\t', config.schema.indexName, err || '\t', res);
-    process.exit(!!err);
+    process.exit(err ? 1 : 0);
   });
 }
 

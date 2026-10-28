@@ -1,6 +1,7 @@
 var config = require('pelias-config').generate().esclient;
-var es = require('elasticsearch');
-var client = new es.Client(config);
+var { Client } = require('@elastic/elasticsearch');
+var esClientOptions = require('./esClientOptions');
+var client = new Client(esClientOptions(config));
 var schema = require('../schema');
 
 var _index = ( process.argv.length > 3 ) ? process.argv[3] : config.schema.indexName;
@@ -21,6 +22,6 @@ client.indices.deleteMapping( { index: _index, type: _type }, function( err, res
   console.log( '[delete mapping]', '\t', _index+'/'+_type, err || '\t', res );
   client.indices.putMapping( { index: _index, type: _type, body:mapping }, function( err, res ){
     console.log( '[put mapping]', '\t\t', _index+'/'+_type, err || '\t', res );
-    process.exit( !!err );
+    process.exit( err ? 1 : 0 );
   });
 });

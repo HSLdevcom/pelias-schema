@@ -1,8 +1,9 @@
 const _ = require('lodash');
 const semver = require('semver');
-const es = require('elasticsearch');
+const { Client } = require('@elastic/elasticsearch');
+const esClientOptions = require('./esClientOptions');
 const config = require('pelias-config').generate();
-const client = new es.Client(config.esclient);
+const client = new Client(esClientOptions(config.esclient));
 const cli = require('./cli');
 
 // pass target elastic version semver as the first CLI arg
@@ -13,7 +14,8 @@ if(!targetVersion){
 }
 
 cli.header(`checking elasticsearch server version matches "${targetVersion}"`);
-client.info(null, (err, res) => {
+client.info({}, (err, result) => {
+  const res = result && result.body;
 
   if (err) {
     console.error(err);
